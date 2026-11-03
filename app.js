@@ -97,7 +97,7 @@ window.addEventListener("beforeunload",ev=>{flushNow();if(cloud()&&Object.values
 window.addEventListener("online",()=>{if(cloud()&&eventId)obReplay()});
 setInterval(()=>{if(cloud()&&eventId&&navigator.onLine&&!Object.values(timers).some(Boolean)&&!Object.values(writing).some(Boolean))obReplay()},30000);
 /* ---------- עדכון גירסה: שומרים הכול ורק אז מרעננים ---------- */
-const APP_VERSION="2026.11.03-2";
+const APP_VERSION="2026.11.03-3";
 async function checkVersion(){try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const j=await r.json();
   if(j.version&&j.version!==APP_VERSION&&!document.getElementById("upd")){flushNow();const d=document.createElement("div");d.id="upd";d.className="toast";d.style.cssText="cursor:pointer;animation:none";
     d.textContent="יש גירסה חדשה. השינויים שלכם שמורים. לחצו לעדכון";d.onclick=async()=>{d.textContent="שומר ומעדכן…";flushNow();
@@ -127,7 +127,7 @@ async function flush(k){
   try{
     if(k==="event"||k==="budget"){const {error}=await sb.from("events").update(eventRow()).eq("id",eventId);if(error)throw error}
     for(const t of MODULE_TABLES[k])await syncTable(t);
-    if(!dirty[k])obDone(k);
+    if(!dirty[k])obDone(k);myWrite[k]=Date.now();
     setSync("נשמר ✓");
   }catch(e){console.error(e);setSync(navigator.onLine?"השמירה נכשלה. השינוי שמור במכשיר וננסה שוב":"אין חיבור. השינויים שמורים במכשיר ויישלחו כשהחיבור יחזור");}
   writing[k]=false;
@@ -145,28 +145,37 @@ function remember(t,rows){
   // keep the snapshot in the exact shape T[t].rows() will produce, so unchanged rows are not re-sent
   const m=new Map();T[t].rows().forEach(r=>{Object.assign(r,{event_id:eventId});m.set(r.id,JSON.stringify(r))});synced[t]=m;
 }
-async function refetch(k){
+async function refetch(k,remote){
   if(timers[k]||writing[k]){refetchQueued[k]=true;return}
   try{
     if(k==="event"||k==="budget"){const {data,error}=await sb.from("events").select("*").eq("id",eventId).single();if(error)throw error;applyEvent(data)}
     for(const t of MODULE_TABLES[k]){const rs=await fetchTable(t);T[t].apply(rs);}
     for(const t of MODULE_TABLES[k])remember(t);
     safeRender();
+    if(remote&&Date.now()-(myWrite[k]||0)>2500){const v=$("#view");if(v){v.classList.remove("flash");void v.offsetWidth;v.classList.add("flash")}}
   }catch(e){console.error(e)}
 }
 let channel=null;
 function subscribe(){
   if(channel)sb.removeChannel(channel);
-  channel=sb.channel("event-"+eventId);
-  const rq={};const later=k=>{clearTimeout(rq[k]);rq[k]=setTimeout(()=>refetch(k),300)};
+  channel=sb.channel("event-"+eventId,{config:{presence:{key:TAB_ID}}});
+  const rq={};const later=k=>{clearTimeout(rq[k]);rq[k]=setTimeout(()=>refetch(k,true),120)};
+  channel.on("presence",{event:"sync"},()=>{try{showOnline(Object.values(channel.presenceState()).map(a=>a[0]))}catch(e){}});
   Object.keys(TABLE_MODULE).forEach(t=>{
     channel.on("postgres_changes",{event:"INSERT",schema:"public",table:t,filter:"event_id=eq."+eventId},()=>later(TABLE_MODULE[t]));
     channel.on("postgres_changes",{event:"UPDATE",schema:"public",table:t,filter:"event_id=eq."+eventId},()=>later(TABLE_MODULE[t]));
     channel.on("postgres_changes",{event:"DELETE",schema:"public",table:t},p=>{const id=p.old&&p.old.id;if(id&&synced[t]&&synced[t].has(id))later(TABLE_MODULE[t])});
   });
   channel.on("postgres_changes",{event:"UPDATE",schema:"public",table:"events",filter:"id=eq."+eventId},()=>{later("event")});
-  channel.subscribe();
+  channel.subscribe(st=>{if(st==="SUBSCRIBED"){channel.track({who:isParents()?"הורים":"הזוג",at:Date.now()});setSync("מחובר בזמן אמת ✓")}
+    if(st==="CHANNEL_ERROR"||st==="TIMED_OUT"){setSync("החיבור בזמן אמת התנתק, מתחבר מחדש…");setTimeout(()=>{if(eventId&&session)subscribe()},3000)}});
 }
+const myWrite={};
+const TAB_ID=Math.random().toString(36).slice(2,10);
+function showOnline(list){const el=$("#online");if(!el)return;const n=list.length;
+  if(n<2){el.hidden=true;return}
+  const c={};list.forEach(x=>{c[x.who]=(c[x.who]||0)+1});
+  el.textContent=`${n} מחוברים עכשיו`;el.title=Object.entries(c).map(([w,k])=>k>1?`${w} (${k})`:w).join(" · ");el.hidden=false}
 async function loadEvent(id){
   eventId=id;synced={};S=blank();
   try{localStorage.setItem("chuppah-event",id)}catch(e){}
