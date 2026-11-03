@@ -1,7 +1,7 @@
 "use strict";
 /* ---------- constants ---------- */
 const DOCS=["event","guests","tables","vendors","budget","tasks","schedule"];
-const VIEWS=[["home","לוח בקרה"],["guests","מוזמנים"],["rsvp","אישורי הגעה"],["seating","הושבה"],["gifts","מתנות"],["vendors","ספקים וחוזים"],["budget","תקציב"],["tasks","משימות"],["day","יום האירוע"],["settings","הגדרות"]];
+const VIEWS=[["home","לוח בקרה"],["venue","אולם ומנות"],["guests","מוזמנים"],["rsvp","אישורי הגעה"],["seating","הושבה"],["gifts","מתנות"],["vendors","ספקים וחוזים"],["budget","תקציב"],["tasks","משימות"],["day","יום האירוע"],["settings","הגדרות"]];
 const SIDES={groom:"צד החתן",bride:"צד הכלה",shared:"משותף"};
 const STATUS={pending:"לא ענה",yes:"מגיע",maybe:"אולי",no:"לא מגיע"};
 const MEALS=["רגיל","צמחוני","טבעוני","ללא גלוטן","ילדים"];
@@ -77,8 +77,8 @@ const T={
 };
 const MODULE_TABLES={guests:["guests"],tables:["seating_tables"],vendors:["vendors","vendor_payments"],budget:["expenses"],tasks:["tasks"],schedule:["schedule_items"],event:[]};
 const TABLE_MODULE={guests:"guests",seating_tables:"tables",vendors:"vendors",vendor_payments:"vendors",expenses:"budget",tasks:"tasks",schedule_items:"schedule"};
-function eventRow(){const e=S.event;return{groom:e.groom||"",bride:e.bride||"",date:nz(e.date),time:e.time||"",venue:e.venue||"",address:e.address||"",budget:num(e.budget),guest_quota:num(e.guestQuota),price_per_plate:num(e.pricePerPlate),min_plates:num(e.minPlates),avg_gift:num(e.avgGift),pending_rate:num(e.pendingRate===""||e.pendingRate==null?75:e.pendingRate),invite_text:e.inviteText||"",sample:!!e.sample,budget_plans:S.budget.plans||{},pledges:S.budget.pledges||{}}}
-function applyEvent(r){S.event={groom:r.groom,bride:r.bride,date:r.date||"",time:r.time,venue:r.venue,address:r.address,budget:num(r.budget),guestQuota:r.guest_quota,pricePerPlate:num(r.price_per_plate),minPlates:r.min_plates,avgGift:num(r.avg_gift),pendingRate:r.pending_rate,inviteText:r.invite_text,sample:r.sample};S.budget.plans=r.budget_plans||{};S.budget.pledges=r.pledges||{}}
+function eventRow(){const e=S.event;return{groom:e.groom||"",bride:e.bride||"",date:nz(e.date),time:e.time||"",venue:e.venue||"",address:e.address||"",venue_type:e.venueType||"אולם",venue_contact:e.venueContact||"",price_tiers:(e.priceTiers||[]).map(t=>({from:num(t.from),price:num(t.price)})),budget:num(e.budget),guest_quota:num(e.guestQuota),price_per_plate:num(e.pricePerPlate),min_plates:num(e.minPlates),avg_gift:num(e.avgGift),pending_rate:num(e.pendingRate===""||e.pendingRate==null?75:e.pendingRate),invite_text:e.inviteText||"",sample:!!e.sample,budget_plans:S.budget.plans||{},pledges:S.budget.pledges||{}}}
+function applyEvent(r){S.event={groom:r.groom,bride:r.bride,date:r.date||"",time:r.time,venue:r.venue,address:r.address,venueType:r.venue_type||"אולם",venueContact:r.venue_contact||"",priceTiers:r.price_tiers||[],budget:num(r.budget),guestQuota:r.guest_quota,pricePerPlate:num(r.price_per_plate),minPlates:r.min_plates,avgGift:num(r.avg_gift),pendingRate:r.pending_rate,inviteText:r.invite_text,sample:r.sample};S.budget.plans=r.budget_plans||{};S.budget.pledges=r.pledges||{}}
 
 function save(k){
   lsSave();
@@ -209,7 +209,7 @@ function safeRender(){
 document.addEventListener("focusout",()=>setTimeout(()=>{if(pendingRender){pendingRender=false;safeRender()}},50));
 
 function loginView(){return `<div class="welcome">
-  <h1>חופה</h1><p class="lead" style="font-size:18px">כל הדרך לחופה.</p>
+  <div class="kicker">${esc(CFG.coupleLine||"עמית וטל מתחתנים")}</div><h1>חופה</h1><p class="lead" style="font-size:18px">יחד כל הדרך.</p>
   <div class="panel" style="max-width:420px"><h2>כניסה</h2><p class="small muted">הקלידו את הסיסמה שקיבלתם מהזוג.</p>
   <form id="login" class="row"><input type="password" id="l-pw" name="pw" required autocomplete="current-password" placeholder="סיסמה" dir="ltr" style="flex:1;min-width:160px"><button class="btn pri" type="submit">כניסה</button></form>
   <p class="small" id="l-msg" style="margin:10px 0 0"></p></div></div>`}
@@ -265,7 +265,10 @@ function stats(){
   const answeredHH=gs.filter(g=>g.status!=="pending").length;
   return{invited,yes,no,pend,maybe,exp:Math.round(exp),hh:gs.length,answeredHH};
 }
-function cateringCost(){const e=E();const s=stats();const plates=Math.max(s.exp,num(e.minPlates));return plates*num(e.pricePerPlate)}
+function priceFor(plates){const e=E();let price=num(e.pricePerPlate);
+  [...(e.priceTiers||[])].filter(t=>num(t.from)>0&&num(t.price)>0).sort((a,b)=>num(a.from)-num(b.from)).forEach(t=>{if(plates>num(t.from))price=num(t.price)});return price}
+function plateInfo(){const e=E();const s=stats();const plates=Math.max(s.exp,num(e.minPlates));const price=priceFor(plates);return{plates,price,cost:plates*price}}
+function cateringCost(){return plateInfo().cost}
 function budgetRows(){
   const rows=CATS.map(c=>({cat:c,plan:num(S.budget.plans[c]),committed:0,paid:0}));
   const by=Object.fromEntries(rows.map(r=>[r.cat,r]));
@@ -300,12 +303,12 @@ function seatedCount(tid){return G().filter(g=>g.table===tid).reduce((a,g)=>a+se
 /* ---------- rendering ---------- */
 function render(){
   if(!loaded)return;
-  if(cloud()&&!session){$("#nav").innerHTML="";$("#couple").textContent="";$("#count").innerHTML="";$("#view").innerHTML=loginView();return}
+  if(cloud()&&!session){$("#nav").innerHTML="";$("#couple").textContent=CFG.coupleLine||"עמית וטל מתחתנים";$("#count").innerHTML="";$("#view").innerHTML=loginView();return}
   const e=E();
-  $("#couple").textContent=e.groom||e.bride?`${e.groom||""} ו${e.bride||""}`:"";
+  $("#couple").textContent=CFG.coupleLine||(e.groom&&e.bride?`${e.groom} ו${e.bride} מתחתנים`:"עמית וטל מתחתנים");
   const d=daysTo(e.date);
   $("#count").innerHTML=d==null?"":d>0?`עוד <b>${d}</b> ימים`:d===0?`<b>היום!</b> מזל טוב`:`<b>${-d}</b> ימים אחרי`;
-  if(!anyDoc||!e.date){$("#nav").innerHTML="";
+  if(!anyDoc||!e.date){$("#nav").innerHTML="";$("#couple").textContent=CFG.coupleLine||"עמית וטל מתחתנים";
     if(cloud()&&readOnly()){$("#view").innerHTML=`<div class="welcome"><h1>חופה</h1><p class="lead">האירוע עוד לא הוקם. בקשו מהזוג להיכנס עם הסיסמה שלהם וליצור אותו.</p><button class="btn" data-act="logout">יציאה</button></div>`;return}
     $("#view").innerHTML=welcome();return}
   const al=alerts();
@@ -313,15 +316,15 @@ function render(){
     if(k==="home"&&al.length)b=al.length;
     if(k==="rsvp"){const p=G().filter(g=>g.status==="pending").length;if(p)b=p}
     return `<button data-act="nav" data-v="${k}" ${k===view?'aria-current="page"':""}><span>${l}</span>${b?`<span class="badge">${b}</span>`:""}</button>`}).join("");
-  const fn={home:vHome,guests:vGuests,rsvp:vRsvp,seating:vSeating,gifts:vGifts,vendors:vVendors,budget:vBudget,tasks:vTasks,day:vDay,settings:vSettings}[view]||vHome;
+  const fn={venue:vVenue,home:vHome,guests:vGuests,rsvp:vRsvp,seating:vSeating,gifts:vGifts,vendors:vVendors,budget:vBudget,tasks:vTasks,day:vDay,settings:vSettings}[view]||vHome;
   $("#view").innerHTML=(readOnly()?`<div class="banner"><span>מצב צפייה בלבד. כל השינויים נעשים על ידי הזוג.</span><button class="btn sm" data-act="logout" style="margin-inline-start:auto">יציאה</button></div>`:"")+(e.sample&&!readOnly()?`<div class="banner"><span>אתם צופים בנתוני דוגמה. נסו הכול בחופשיות.</span><button class="btn sm pri" data-act="fresh">התחילו עם החתונה שלכם</button></div>`:"")+fn();
   if(view==="settings")sharingPanel();
   lockForViewer();
 }
 
 function welcome(){return `<div class="welcome">
-  <h1>חופה</h1>
-  <p class="lead" style="font-size:18px">כל הדרך לחופה. מוזמנים, אישורי הגעה, הושבה, מתנות, ספקים וחוזים, תקציב, משימות ויום האירוע, כשכל חלק מעדכן את האחרים.</p>
+  <div class="kicker">${esc(CFG.coupleLine||"עמית וטל מתחתנים")}</div><h1>חופה</h1>
+  <p class="lead" style="font-size:18px">יחד כל הדרך. מוזמנים, אישורי הגעה, הושבה, מתנות, ספקים וחוזים, תקציב, משימות ויום האירוע, כשכל חלק מעדכן את האחרים.</p>
   <div class="mods">
     <div><b>מוזמנים ואישורים</b>רשימה אחת לשני הצדדים, הודעת וואטסאפ אישית לכל מוזמן</div>
     <div><b>הושבה</b>שולחנות שמתעדכנים לפי האישורים, הושבה אוטומטית לפי קבוצות</div>
@@ -334,7 +337,9 @@ function welcome(){return `<div class="welcome">
     <label class="field">שם הכלה<input type="text" id="o-bride" name="bride" required></label>
     <label class="field">תאריך החתונה<input type="date" id="o-date" name="date" required></label>
     <label class="field">תקציב כולל (₪)<input type="number" id="o-budget" name="budget" value="180000"></label>
-    <label class="field">מחיר למנה באולם (₪)<input type="number" id="o-ppp" name="pricePerPlate" value="320"></label>
+    <label class="field">שם האולם / הגן<input type="text" id="o-venue" name="venue" placeholder="למשל: גני הדר"></label>
+    <label class="field">סוג המקום<select id="o-vtype" name="venueType"><option>אולם</option><option>גן אירועים</option><option>מקום אחר</option></select></label>
+    <label class="field">מחיר בסיס למנה (₪)<input type="number" id="o-ppp" name="pricePerPlate" value="320"></label>
     <label class="field">מתנה ממוצעת לאורח (₪)<input type="number" id="o-gift" name="avgGift" value="400"></label>
     <div class="row wide"><button class="btn pri" type="submit">צרו את החתונה</button><button class="btn" type="button" data-act="sample">הציגו לי עם נתוני דוגמה</button></div>
   </form></div></div>`}
@@ -373,6 +378,34 @@ function vHome(){
   </div>`;
 }
 
+function vVenue(){const e=E();const pi=plateInfo();const s=stats();
+  const tiers=e.priceTiers||[];
+  const f=(k,l,t="text",extra="")=>`<label class="field">${l}<input type="${t}" id="vn-${k}" data-bind="event.${k}" value="${esc(e[k]??"")}" ${extra}></label>`;
+  const marks=[...new Set([num(e.minPlates),...tiers.map(t=>num(t.from)),...tiers.map(t=>num(t.from)+1),s.exp].filter(x=>x>0))].sort((a,b)=>a-b);
+  return `<h1>אולם ומנות</h1><p class="lead">פרטי המקום ומחיר המנה. אם המחיר משתנה מעל כמות מסוימת של אורחים, הוסיפו מדרגה, והתקציב יתעדכן לבד לפי מספר המגיעים.</p>
+  <div class="stack">
+  <section class="panel"><h2>המקום</h2><div class="form">
+    ${f("venue","שם האולם / הגן")}
+    <label class="field">סוג המקום<select id="vn-type" data-bind="event.venueType">${["אולם","גן אירועים","מקום אחר"].map(t=>`<option ${(e.venueType||"אולם")===t?"selected":""}>${t}</option>`).join("")}</select></label>
+    ${f("address","כתובת")}${f("venueContact","איש קשר במקום")}${f("time","שעת קבלת פנים","time")}
+  </div></section>
+  <section class="panel"><h2>מחיר למנה</h2><div class="form">
+    ${f("pricePerPlate","מחיר בסיס למנה (₪)","number","min=\"0\"")}${f("minPlates","מינימום מנות בחוזה","number","min=\"0\"")}
+  </div>
+  <h3 style="margin-top:16px">מדרגות מחיר לפי כמות</h3>
+  ${tiers.map((t,i)=>`<div class="tier"><span>מעל</span><input class="inl" type="number" min="0" id="tf-${i}" data-tier="${i}" data-tf="from" value="${num(t.from)||""}" style="width:90px"><span>אורחים, מחיר למנה</span><input class="inl" type="number" min="0" id="tp-${i}" data-tier="${i}" data-tf="price" value="${num(t.price)||""}" style="width:90px"><span>₪</span><button class="btn sm ghost" data-act="tier-del" data-i="${i}" aria-label="מחיקת מדרגה">×</button></div>`).join("")||`<p class="small muted">אין מדרגות. המחיר הבסיסי חל על כל כמות.</p>`}
+  <button class="btn sm" data-act="tier-add" style="margin-top:8px">הוספת מדרגה</button>
+  <p class="small muted" style="margin-top:8px">המחיר של המדרגה חל על כל המנות כשמספר האורחים עובר את הסף.</p></section>
+  <section class="panel"><h2>חישוב לפי התחזית</h2>
+    <div class="row" style="align-items:baseline"><span class="calc">${money(pi.cost)}</span><span class="muted">${pi.plates} מנות × ${money(pi.price)}${num(e.minPlates)&&s.exp<num(e.minPlates)?` (לפי מינימום ${e.minPlates}, התחזית ${s.exp})`:` (תחזית מגיעים: ${s.exp})`}</span></div>
+    ${marks.length?`<div class="tbl-wrap" style="margin-top:12px"><table><thead><tr><th class="num">אורחים</th><th class="num">מנות לתשלום</th><th class="num">מחיר למנה</th><th class="num">סה"כ</th></tr></thead><tbody>${marks.map(n=>{const pl=Math.max(n,num(e.minPlates));const pr=priceFor(pl);return `<tr${n===s.exp?' style="background:var(--accent-soft)"':""}><td class="num">${n}${n===s.exp?" (תחזית)":""}</td><td class="num">${pl}</td><td class="num">${money(pr)}</td><td class="num"><b>${money(pl*pr)}</b></td></tr>`}).join("")}</tbody></table></div>`:""}
+  </section></div>`;
+}
+document.addEventListener("click",ev=>{const el=ev.target.closest("[data-act]");if(!el)return;
+  if(el.dataset.act==="tier-add"){const e=E();e.priceTiers=e.priceTiers||[];const last=e.priceTiers[e.priceTiers.length-1];e.priceTiers.push({from:last?num(last.from)+100:300,price:last?Math.max(0,num(last.price)-20):Math.max(0,num(e.pricePerPlate)-20)});save("event");render()}
+  if(el.dataset.act==="tier-del"){E().priceTiers.splice(num(el.dataset.i),1);save("event");render()}
+});
+document.addEventListener("change",ev=>{const el=ev.target;if(el.dataset.tier==null)return;const t=E().priceTiers[num(el.dataset.tier)];if(!t)return;t[el.dataset.tf]=num(el.value);save("event");pendingRender=true});
 let gFilter={q:"",side:"",status:""};
 function vGuests(){
   const s=stats();
@@ -494,9 +527,9 @@ function vVendors(){
 
 function vBudget(){
   const e=E(),rows=budgetRows();const plan=rows.reduce((a,r)=>a+r.plan,0),com=rows.reduce((a,r)=>a+r.committed,0),paid=rows.reduce((a,r)=>a+r.paid,0);
-  const s=stats();const plates=Math.max(s.exp,num(e.minPlates));
+  const s=stats();const pi=plateInfo();
   return `<h1>תקציב</h1><p class="lead">התחזית מחברת את הספקים שנסגרו, הוצאות נוספות, ועלות המנות לפי מספר המגיעים הצפוי.</p>
-  <div class="stack"><div class="kpis">${kpi("תקציב כולל",money(e.budget))}${kpi("מתוכנן בקטגוריות",money(plan))}${kpi("תחזית עלות",money(com),num(e.budget)?(com>num(e.budget)?`<span style="color:var(--bad)">חריגה ${money(com-num(e.budget))}</span>`:`נשארו ${money(num(e.budget)-com)}`):"")}${kpi("שולם",money(paid))}${kpi("עלות מנות",money(cateringCost()),`${plates} מנות × ${money(e.pricePerPlate)}`)}</div>
+  <div class="stack"><div class="kpis">${kpi("תקציב כולל",money(e.budget))}${kpi("מתוכנן בקטגוריות",money(plan))}${kpi("תחזית עלות",money(com),num(e.budget)?(com>num(e.budget)?`<span style="color:var(--bad)">חריגה ${money(com-num(e.budget))}</span>`:`נשארו ${money(num(e.budget)-com)}`):"")}${kpi("שולם",money(paid))}${kpi("עלות מנות",money(cateringCost()),`${pi.plates} מנות × ${money(pi.price)}`)}</div>
   <div class="panel flush tbl-wrap"><table><thead><tr><th>קטגוריה</th><th class="num">מתוכנן</th><th class="num">תחזית</th><th class="num">שולם</th><th style="min-width:140px">ניצול</th></tr></thead><tbody>
   ${rows.map(r=>`<tr><td>${esc(r.cat)}${r.cat==="אולם וקייטרינג"?`<div class="small muted">כולל ${money(cateringCost())} מנות</div>`:""}</td><td class="num"><input class="inl" type="number" id="bp-${CATS.indexOf(r.cat)}" data-plan="${esc(r.cat)}" value="${r.plan||""}"></td><td class="num" style="${r.plan&&r.committed>r.plan?"color:var(--bad);font-weight:700":""}">${money(r.committed)}</td><td class="num">${money(r.paid)}</td><td>${bar(r.plan?r.committed/r.plan*100:0,r.plan&&r.committed>r.plan?"over":"")}</td></tr>`).join("")}
   <tr><td><b>סה"כ</b></td><td class="num"><b>${money(plan)}</b></td><td class="num"><b>${money(com)}</b></td><td class="num"><b>${money(paid)}</b></td><td></td></tr></tbody></table></div>
@@ -565,8 +598,8 @@ function vSettings(){const e=E();
   const f=(k,l,t="text")=>`<label class="field">${l}<input type="${t}" id="s-${k}" data-bind="event.${k}" value="${esc(e[k]??"")}"></label>`;
   return `<h1>הגדרות האירוע</h1><p class="lead">הפרטים כאן מזינים את ההזמנה, התקציב והצ'קליסט.</p>
   <div class="stack"><section class="panel"><div class="form">
-  ${f("groom","שם החתן")}${f("bride","שם הכלה")}${f("date","תאריך","date")}${f("time","שעת קבלת פנים","time")}${f("venue","אולם")}${f("address","כתובת")}
-  ${f("budget","תקציב כולל (₪)","number")}${f("guestQuota","מכסת מוזמנים כוללת","number")}${f("pricePerPlate","מחיר למנה (₪)","number")}${f("minPlates","מינימום מנות בחוזה","number")}${f("avgGift","מתנה ממוצעת לאורח (₪)","number")}${f("pendingRate","% הגעה צפוי ממי שלא ענה","number")}
+  ${f("groom","שם החתן")}${f("bride","שם הכלה")}${f("date","תאריך","date")}${f("time","שעת קבלת פנים","time")}
+  ${f("budget","תקציב כולל (₪)","number")}${f("guestQuota","מכסת מוזמנים כוללת","number")}${f("avgGift","מתנה ממוצעת לאורח (₪)","number")}${f("pendingRate","% הגעה צפוי ממי שלא ענה","number")}
   </div></section>
   ${cloud()?`<section class="panel"><h2>שיתוף עם המשפחה</h2><p class="small muted">כל מי שמוזמן כאן רואה את אותו אירוע ומתעדכן בזמן אמת.</p><div id="share-box"><p class="muted small">טוען…</p></div></section>
   <section class="panel"><h2>החשבון שלי</h2><div class="pay"><span dir="ltr">${esc(session&&session.user.email)}</span><button class="btn sm" data-act="logout" style="margin-inline-start:auto">יציאה</button></div>
@@ -691,7 +724,7 @@ document.addEventListener("submit",ev=>{
   if(f.id==="onb")return;
   render();
 });
-document.addEventListener("submit",ev=>{if(ev.target.id!=="onb")return;ev.preventDefault();const fd=new FormData(ev.target);createWedding({groom:fd.get("groom"),bride:fd.get("bride"),date:fd.get("date"),budget:num(fd.get("budget")),pricePerPlate:num(fd.get("pricePerPlate")),avgGift:num(fd.get("avgGift"))})});
+document.addEventListener("submit",ev=>{if(ev.target.id!=="onb")return;ev.preventDefault();const fd=new FormData(ev.target);createWedding({venue:fd.get("venue")||"",venueType:fd.get("venueType")||"אולם",groom:fd.get("groom"),bride:fd.get("bride"),date:fd.get("date"),budget:num(fd.get("budget")),pricePerPlate:num(fd.get("pricePerPlate")),avgGift:num(fd.get("avgGift"))})});
 
 function taskForm(t){t=t||{phase:"כללי"};const phases=[...new Set(S.tasks.items.map(x=>x.phase))];
   return `<div class="form"><label class="field wide">משימה<input type="text" name="title" id="tk-t" required value="${esc(t.title||"")}"></label>
@@ -756,7 +789,7 @@ function createWedding(ev){putState(baseFor(ev),"החתונה נוצרה. מזל
 function loadSample(){putState(makeSample(),"נטענו נתוני דוגמה")}
 function makeSample(){
   const date=iso(new Date(today().getTime()+226*864e5));
-  const st=baseFor({groom:"נועם",bride:"מאיה",date,time:"19:30",venue:"גני התערוכה",address:"רוקח 101, תל אביב",budget:210000,pricePerPlate:340,minPlates:300,avgGift:450,pendingRate:75,guestQuota:400,sample:true});
+  const st=baseFor({groom:"נועם",bride:"מאיה",date,time:"19:30",venue:"גני התערוכה",venueType:"גן אירועים",venueContact:"שרית, 054-7001122",priceTiers:[{from:350,price:320},{from:450,price:300}],address:"רוקח 101, תל אביב",budget:210000,pricePerPlate:340,minPlates:300,avgGift:450,pendingRate:75,guestQuota:400,sample:true});
   const fam=["כהן","לוי","מזרחי","פרץ","ביטון","אברהם","פרידמן","אזולאי","דהן","שפירא","גבאי","חדד","אוחיון","יוסף","רוזן","קליין","בן דוד","עמר","גולן","נחום","שטרן","ברק","טל","אלון","סויסה","מלכה","זילברמן","אדלר","חזן","שרעבי"];
   const first=["דנה","יואב","שירה","איתי","רוני","עומר","נועה","אלון","תמר","גיא","ליאור","מיכל","עידו","הילה","אורי","יעל","דור","שני","אסף","קרן","רועי","ענבל","ניר","מורן","טל","עדי","בן","גלי","אביב","ליה"];
   const groups={groom:[["משפחה",14,3],["חברים מהצבא",9,2],["עבודה",8,2],["חברים מהתיכון",7,2]],bride:[["משפחה",16,3],["חברות מהאוניברסיטה",9,2],["עבודה",8,2],["שכנים",4,2]],shared:[["חברים משותפים",10,2]]};
