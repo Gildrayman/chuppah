@@ -97,7 +97,7 @@ window.addEventListener("beforeunload",ev=>{flushNow();if(cloud()&&Object.values
 window.addEventListener("online",()=>{if(cloud()&&eventId)obReplay()});
 setInterval(()=>{if(cloud()&&eventId&&navigator.onLine&&!Object.values(timers).some(Boolean)&&!Object.values(writing).some(Boolean))obReplay()},30000);
 /* ---------- עדכון גירסה: שומרים הכול ורק אז מרעננים ---------- */
-const APP_VERSION="2026.11.03-6";
+const APP_VERSION="2026.11.03-7";
 let updating=false;
 const busy=()=>Object.values(writing).some(Boolean)||Object.values(timers).some(Boolean);
 async function checkVersion(){if(updating)return;try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const j=await r.json();
@@ -412,7 +412,7 @@ function render(){
   $("#nav").innerHTML=VIEWS.map(([k,l])=>{let b="";
     if(k==="home"&&al.length)b=al.length;
     if(k==="rsvp"){const p=G().filter(g=>g.status==="pending").length;if(p)b=p}
-    return `<button data-act="nav" data-v="${k}" ${k===view?'aria-current="page"':""}><span>${l}</span>${b?`<span class="badge" title="${k==="home"?b+" דברים דורשים תשומת לב":k==="rsvp"?b+" מוזמנים עוד לא ענו":""}">${b}</span>`:""}</button>`}).join("");
+    return `<button data-act="nav" data-v="${k}" ${k===view?'aria-current="page"':""}><span>${l}</span>${b?`<span class="badge" title="${k==="home"?b+" דברים דורשים תשומת לב":k==="rsvp"?b+" מוזמנים עוד לא ענו":""}">${k==="home"?b+" לטיפול":k==="rsvp"?b+" לא ענו":b}</span>`:""}</button>`}).join("");
   const fn={venue:vVenue,home:vHome,guests:vGuests,rsvp:vRsvp,seating:vSeating,gifts:vGifts,vendors:vVendors,budget:vBudget,tasks:vTasks,day:vDay,settings:vSettings}[view]||vHome;
   const e2=E();const sugg=isParents()?["הורי החתן","הורי הכלה"]:[e2.groom,e2.bride].filter(Boolean);
   $("#view").innerHTML=(cloud()&&session&&!meName()?`<div class="banner"><span>איך לקרוא לך? השם יופיע לשאר המחוברים.</span><span class="row" style="gap:6px;margin-inline-start:auto">${sugg.map(n=>`<button class="btn sm pri" data-act="me-set" data-name="${esc(n)}">${esc(n)}</button>`).join("")}<input id="me-in" type="text" placeholder="שם אחר" style="width:110px"><button class="btn sm" data-act="me-set">שמירה</button></span></div>`:"")+(bioOffer&&cloud()&&session&&!bioFor(myEmail())?`<div class="banner"><span>רוצים להיכנס בפעם הבאה עם זיהוי פנים במקום סיסמה?</span><button class="btn sm pri" data-act="bio-enable" style="margin-inline-start:auto">הפעלה</button><button class="btn sm" data-act="bio-later">לא עכשיו</button></div>`:"")+(readOnly()?`<div class="banner"><span>מצב צפייה בלבד. כל השינויים נעשים על ידי הזוג.</span><button class="btn sm" data-act="logout" style="margin-inline-start:auto">יציאה</button></div>`:"")+(e.sample&&!readOnly()?`<div class="banner"><span>אתם צופים בנתוני דוגמה. נסו הכול בחופשיות.</span><button class="btn sm pri" data-act="fresh">התחילו עם החתונה שלכם</button></div>`:"")+fn();
