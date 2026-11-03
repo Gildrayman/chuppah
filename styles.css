@@ -161,3 +161,4 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
 .who{display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 4px;border-radius:999px;background:color-mix(in srgb,var(--card,#fff) 80%,transparent);border:1px solid var(--line);font-weight:600;white-space:nowrap}
 .who i{font-style:normal;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:var(--sage);color:#fff;font-size:11px}
 .who.me i{background:var(--accent)}
+.who.me{cursor:pointer}.who u{font-weight:400;font-size:11px;color:var(--accent);margin-inline-start:2px}

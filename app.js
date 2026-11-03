@@ -97,7 +97,7 @@ window.addEventListener("beforeunload",ev=>{flushNow();if(cloud()&&Object.values
 window.addEventListener("online",()=>{if(cloud()&&eventId)obReplay()});
 setInterval(()=>{if(cloud()&&eventId&&navigator.onLine&&!Object.values(timers).some(Boolean)&&!Object.values(writing).some(Boolean))obReplay()},30000);
 /* ---------- עדכון גירסה: שומרים הכול ורק אז מרעננים ---------- */
-const APP_VERSION="2026.11.03-5";
+const APP_VERSION="2026.11.03-6";
 let updating=false;
 const busy=()=>Object.values(writing).some(Boolean)||Object.values(timers).some(Boolean);
 async function checkVersion(){if(updating)return;try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const j=await r.json();
@@ -177,7 +177,7 @@ function subscribe(){
 }
 const myWrite={};
 const TAB_ID=Math.random().toString(36).slice(2,10);
-function meName(){try{return localStorage.getItem("chuppah-me:"+myEmail())||""}catch(e){return""}}
+function meName(){try{let n=localStorage.getItem("chuppah-me:"+myEmail())||"";if(n.trim()==="דם כיל"){n="גיל";localStorage.setItem("chuppah-me:"+myEmail(),n)}return n}catch(e){return""}}
 const roleLabel=()=>isParents()?"הורים":"הזוג";
 function trackMe(){try{if(channel)channel.track({who:meName()||roleLabel(),role:roleLabel(),tab:TAB_ID,at:Date.now()})}catch(e){}}
 let onlineList=[];
@@ -185,7 +185,7 @@ function showOnline(list){onlineList=list||onlineList;const el=$("#online");if(!
   if(!cloud()||!session||locked||!eventId){el.hidden=true;return}
   const seen=new Map();onlineList.forEach(x=>{if(!x)return;const k=x.who||x.role||"אורח";const me=x.tab===TAB_ID;const c=seen.get(k)||{n:0,me:false,role:x.role};c.n++;c.me=c.me||me;seen.set(k,c)});
   if(!seen.size)seen.set(meName()||roleLabel(),{n:1,me:true,role:roleLabel()});
-  const chips=[...seen.entries()].sort((a,b)=>(b[1].me-a[1].me)).map(([w,c])=>`<span class="who${c.me?" me":""}" title="${esc(c.role||"")}"><i>${esc((w||"?").trim().charAt(0))}</i>${esc(w)}${c.me?" (אני)":""}${c.n>1?` ×${c.n}`:""}</span>`).join("");
+  const chips=[...seen.entries()].sort((a,b)=>(b[1].me-a[1].me)).map(([w,c])=>`<span class="who${c.me?" me":""}" ${c.me?'data-act="me-change" role="button" title="לחצו לשינוי השם"':`title="${esc(c.role||"")}"`}><i>${esc((w||"?").trim().charAt(0))}</i>${esc(w)}${c.me?' (אני) <u>שינוי</u>':""}${c.n>1?` ×${c.n}`:""}</span>`).join("");
   el.innerHTML=`<b>מחוברים עכשיו:</b>${chips}`;el.hidden=false}
 async function loadEvent(id){
   eventId=id;synced={};S=blank();
@@ -270,6 +270,7 @@ document.addEventListener("click",ev=>{const el=ev.target.closest("[data-act]");
   if(a==="bio-unlock")bioUnlock();
   if(a==="bio-later"){bioOffer=false;try{localStorage.setItem("chuppah-bio-skip","1")}catch(e){}render()}
   if(a==="lock"){locked=true;render();showOnline()}
+  if(a==="me-change"){const n=(prompt("איך לקרוא לך?",meName())||"").trim();if(n){try{localStorage.setItem("chuppah-me:"+myEmail(),n)}catch(e){}trackMe();showOnline();toast("השם עודכן")}return}
   if(a==="me-set"){const n=(el.dataset.name||($("#me-in")&&$("#me-in").value)||"").trim();if(!n)return;try{localStorage.setItem("chuppah-me:"+myEmail(),n)}catch(e){}trackMe();render();showOnline()}
 });
 // כל כניסה מחדש דורשת זיהוי: חזרה אחרי 5 דקות ברקע נועלת (זיהוי פנים) או מחזירה למסך הסיסמה
