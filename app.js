@@ -97,7 +97,7 @@ window.addEventListener("beforeunload",ev=>{flushNow();if(cloud()&&Object.values
 window.addEventListener("online",()=>{if(cloud()&&eventId)obReplay()});
 setInterval(()=>{if(cloud()&&eventId&&navigator.onLine&&!Object.values(timers).some(Boolean)&&!Object.values(writing).some(Boolean))obReplay()},30000);
 /* ---------- עדכון גירסה: שומרים הכול ורק אז מרעננים ---------- */
-const APP_VERSION="2026.11.03-3";
+const APP_VERSION="2026.11.03-4";
 async function checkVersion(){try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const j=await r.json();
   if(j.version&&j.version!==APP_VERSION&&!document.getElementById("upd")){flushNow();const d=document.createElement("div");d.id="upd";d.className="toast";d.style.cssText="cursor:pointer;animation:none";
     d.textContent="יש גירסה חדשה. השינויים שלכם שמורים. לחצו לעדכון";d.onclick=async()=>{d.textContent="שומר ומעדכן…";flushNow();
