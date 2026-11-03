@@ -97,7 +97,7 @@ window.addEventListener("beforeunload",ev=>{flushNow();if(cloud()&&Object.values
 window.addEventListener("online",()=>{if(cloud()&&eventId)obReplay()});
 setInterval(()=>{if(cloud()&&eventId&&navigator.onLine&&!Object.values(timers).some(Boolean)&&!Object.values(writing).some(Boolean))obReplay()},30000);
 /* ---------- עדכון גירסה: שומרים הכול ורק אז מרעננים ---------- */
-const APP_VERSION="2026.11.03-10";
+const APP_VERSION="2026.11.03-11";
 let updating=false;
 const busy=()=>Object.values(writing).some(Boolean)||Object.values(timers).some(Boolean);
 async function checkVersion(){if(updating)return;try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const j=await r.json();
@@ -241,8 +241,8 @@ const myEmail=()=>((session&&session.user.email)||"").toLowerCase();
 const bioFor=em=>em?bioGet()[em]:null;
 async function bioCheck(){try{bioOk=!!(window.PublicKeyCredential&&window.isSecureContext&&await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable())}catch(e){bioOk=false}}
 async function bioEnable(){
-  try{const cred=await navigator.credentials.create({publicKey:{challenge:rnd(32),rp:{name:"i Do"},
-      user:{id:rnd(16),name:isParents()?"i Do · הורים":"i Do · הזוג",displayName:isParents()?"הורים":"הזוג"},
+  try{const cred=await navigator.credentials.create({publicKey:{challenge:rnd(32),rp:{name:"i DO"},
+      user:{id:rnd(16),name:isParents()?"i DO · הורים":"i DO · הזוג",displayName:isParents()?"הורים":"הזוג"},
       pubKeyCredParams:[{type:"public-key",alg:-7},{type:"public-key",alg:-257}],
       authenticatorSelection:{authenticatorAttachment:"platform",userVerification:"required",residentKey:"discouraged"},timeout:60000}});
     const o=bioGet();o[myEmail()]={id:b64u(cred.rawId),at:Date.now()};bioSet(o);bioOffer=false;toast("זיהוי הפנים הופעל במכשיר הזה");render()
@@ -254,7 +254,7 @@ async function bioUnlock(){const c=bioFor(myEmail());if(!c)return;const msg=$("#
   }catch(e){console.warn(e);if(msg)msg.textContent="הזיהוי לא הצליח. נסו שוב, או היכנסו עם סיסמה."}}
 const FACE_SVG=`<svg viewBox="0 0 48 48" width="64" height="64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15V10a4 4 0 0 1 4-4h5M33 6h5a4 4 0 0 1 4 4v5M42 33v5a4 4 0 0 1-4 4h-5M15 42h-5a4 4 0 0 1-4-4v-5"/><path d="M17 18v3M31 18v3M24 19v7h-2M18 31c3.5 3 8.5 3 12 0"/></svg>`;
 function unlockView(){return `<div class="welcome">
-  <div class="kicker">${esc(CFG.coupleLine||"עמית וטל מתחתנים")}</div><img class="hero-logo" src="logo.jpg" alt="i Do · הכנות לחתונה בקלות" width="220" height="220">
+  <div class="kicker">${esc(CFG.coupleLine||"עמית וטל מתחתנים")}</div><img class="hero-logo" src="logo.jpg" alt="i DO · הכנות לחתונה בקלות" width="220" height="220">
   <div class="panel" style="max-width:420px;text-align:center"><div class="bio-ico" aria-hidden="true">${FACE_SVG}</div>
   <h2>${isParents()?"שלום להורים":"שלום לזוג"}</h2><p class="small muted">היכנסו עם זיהוי פנים או טביעת אצבע.</p>
   <button class="btn pri" data-act="bio-unlock" style="width:100%;justify-content:center">כניסה עם זיהוי פנים</button>
@@ -305,7 +305,7 @@ function safeRender(){
 document.addEventListener("focusout",()=>setTimeout(()=>{if(pendingRender){pendingRender=false;safeRender()}},50));
 
 function loginView(){return `<div class="welcome">
-  <div class="kicker">${esc(CFG.coupleLine||"עמית וטל מתחתנים")}</div><img class="hero-logo" src="logo.jpg" alt="i Do · הכנות לחתונה בקלות" width="220" height="220">
+  <div class="kicker">${esc(CFG.coupleLine||"עמית וטל מתחתנים")}</div><img class="hero-logo" src="logo.jpg" alt="i DO · הכנות לחתונה בקלות" width="220" height="220">
   <div class="panel" style="max-width:420px"><h2>כניסה</h2><p class="small muted">הקלידו את הסיסמה שקיבלתם מהזוג.</p>
   <form id="login" class="row"><input type="password" id="l-pw" name="pw" required autocomplete="current-password" placeholder="סיסמה" dir="ltr" style="flex:1;min-width:160px"><button class="btn pri" type="submit">כניסה</button></form>
   <p class="small" id="l-msg" style="margin:10px 0 0"></p></div></div>`}
@@ -406,7 +406,7 @@ function render(){
   const d=daysTo(e.date);
   $("#count").innerHTML=d==null?"":d>0?`עוד <b>${d}</b> ימים`:d===0?`<b>היום!</b> מזל טוב`:`<b>${-d}</b> ימים אחרי`;
   if(!anyDoc||!e.date){$("#nav").innerHTML="";$("#couple").textContent=CFG.coupleLine||"עמית וטל מתחתנים";
-    if(cloud()&&readOnly()){$("#view").innerHTML=`<div class="welcome"><img class="hero-logo" src="logo.jpg" alt="i Do · הכנות לחתונה בקלות" width="220" height="220"><p class="lead">האירוע עוד לא הוקם. בקשו מהזוג להיכנס עם הסיסמה שלהם וליצור אותו.</p><button class="btn" data-act="logout">יציאה</button></div>`;return}
+    if(cloud()&&readOnly()){$("#view").innerHTML=`<div class="welcome"><img class="hero-logo" src="logo.jpg" alt="i DO · הכנות לחתונה בקלות" width="220" height="220"><p class="lead">האירוע עוד לא הוקם. בקשו מהזוג להיכנס עם הסיסמה שלהם וליצור אותו.</p><button class="btn" data-act="logout">יציאה</button></div>`;return}
     $("#view").innerHTML=welcome();return}
   const al=alerts();
   $("#nav").innerHTML=VIEWS.map(([k,l])=>{let b="";
@@ -421,7 +421,7 @@ function render(){
 }
 
 function welcome(){return `<div class="welcome">
-  <div class="kicker">${esc(CFG.coupleLine||"עמית וטל מתחתנים")}</div><img class="hero-logo" src="logo.jpg" alt="i Do · הכנות לחתונה בקלות" width="220" height="220">
+  <div class="kicker">${esc(CFG.coupleLine||"עמית וטל מתחתנים")}</div><img class="hero-logo" src="logo.jpg" alt="i DO · הכנות לחתונה בקלות" width="220" height="220">
   <p class="lead" style="font-size:18px">הכנות לחתונה בקלות: מוזמנים, אישורי הגעה, הושבה, מתנות, ספקים וחוזים, תקציב, משימות ויום האירוע, כשכל חלק מעדכן את האחרים.</p>
   <div class="mods">
     <div><b>מוזמנים ואישורים</b>רשימה אחת לשני הצדדים, הודעת וואטסאפ אישית לכל מוזמן</div>
