@@ -148,3 +148,4 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
 .tier{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 0;border-bottom:1px dashed var(--line)}
 .tier:last-child{border-bottom:0}
 .calc{font-family:var(--display);font-size:24px;color:var(--accent)}
+.bio-ico{color:var(--accent);display:flex;justify-content:center;margin:4px 0 8px}

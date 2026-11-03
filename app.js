@@ -80,8 +80,31 @@ const TABLE_MODULE={guests:"guests",seating_tables:"tables",vendors:"vendors",ve
 function eventRow(){const e=S.event;return{groom:e.groom||"",bride:e.bride||"",date:nz(e.date),time:e.time||"",venue:e.venue||"",address:e.address||"",venue_type:e.venueType||"אולם",venue_contact:e.venueContact||"",price_tiers:(e.priceTiers||[]).map(t=>({from:num(t.from),price:num(t.price)})),budget:num(e.budget),guest_quota:num(e.guestQuota),price_per_plate:num(e.pricePerPlate),min_plates:num(e.minPlates),avg_gift:num(e.avgGift),pending_rate:num(e.pendingRate===""||e.pendingRate==null?75:e.pendingRate),invite_text:e.inviteText||"",sample:!!e.sample,budget_plans:S.budget.plans||{},pledges:S.budget.pledges||{}}}
 function applyEvent(r){S.event={groom:r.groom,bride:r.bride,date:r.date||"",time:r.time,venue:r.venue,address:r.address,venueType:r.venue_type||"אולם",venueContact:r.venue_contact||"",priceTiers:r.price_tiers||[],budget:num(r.budget),guestQuota:r.guest_quota,pricePerPlate:num(r.price_per_plate),minPlates:r.min_plates,avgGift:num(r.avg_gift),pendingRate:r.pending_rate,inviteText:r.invite_text,sample:r.sample};S.budget.plans=r.budget_plans||{};S.budget.pledges=r.pledges||{}}
 
+/* ---------- שמירה בטוחה: גיבוי מקומי של כל שינוי עד שהוא נשמר בענן ---------- */
+const OB="chuppah-outbox-v1";
+function obGet(){try{return JSON.parse(localStorage.getItem(OB)||"null")}catch(e){return null}}
+function obMark(k){if(!cloud()||!eventId)return;try{let o=obGet();if(!o||o.eventId!==eventId)o={eventId,pending:{}};o.pending[k]=1;o.state=S;o.at=Date.now();localStorage.setItem(OB,JSON.stringify(o))}catch(e){}}
+function obDone(k){try{const o=obGet();if(!o||o.eventId!==eventId)return;delete o.pending[k];if(!Object.keys(o.pending).length)localStorage.removeItem(OB);else{o.state=S;localStorage.setItem(OB,JSON.stringify(o))}}catch(e){}}
+async function obReplay(){const o=obGet();if(!o||o.eventId!==eventId||readOnly())return;const ks=Object.keys(o.pending||{}).filter(k=>MODULE_TABLES[k]||k==="event");if(!ks.length)return;
+  ks.forEach(k=>{if(o.state&&o.state[k]!==undefined)S[k]=o.state[k]});
+  setSync("משחזר שינויים שלא נשמרו…");for(const k of ks)await flush(k);render()}
+function flushNow(){const a=document.activeElement;if(a&&a.blur&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))a.blur();
+  if(!cloud()){lsSave();return}Object.keys(timers).forEach(k=>{if(timers[k]){clearTimeout(timers[k]);timers[k]=null;flush(k)}})}
+function hasUnsaved(){return Object.values(timers).some(Boolean)||Object.values(writing).some(Boolean)||!!(obGet()&&Object.keys(obGet().pending||{}).length)}
+document.addEventListener("visibilitychange",()=>{if(document.hidden)flushNow()});
+window.addEventListener("pagehide",flushNow);
+window.addEventListener("beforeunload",ev=>{flushNow();if(cloud()&&Object.values(writing).some(Boolean)){ev.preventDefault();ev.returnValue=""}});
+window.addEventListener("online",()=>{if(cloud()&&eventId)obReplay()});
+setInterval(()=>{if(cloud()&&eventId&&navigator.onLine&&!Object.values(timers).some(Boolean)&&!Object.values(writing).some(Boolean))obReplay()},30000);
+/* ---------- עדכון גירסה: שומרים הכול ורק אז מרעננים ---------- */
+const APP_VERSION="2026.11.03-2";
+async function checkVersion(){try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const j=await r.json();
+  if(j.version&&j.version!==APP_VERSION&&!document.getElementById("upd")){flushNow();const d=document.createElement("div");d.id="upd";d.className="toast";d.style.cssText="cursor:pointer;animation:none";
+    d.textContent="יש גירסה חדשה. השינויים שלכם שמורים. לחצו לעדכון";d.onclick=async()=>{d.textContent="שומר ומעדכן…";flushNow();
+      for(let i=0;i<40&&(Object.values(writing).some(Boolean)||Object.values(timers).some(Boolean));i++)await new Promise(r=>setTimeout(r,150));location.reload()};document.body.appendChild(d)}}catch(e){}}
+setInterval(checkVersion,5*60*1000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkVersion()});
 function save(k){
-  lsSave();
+  lsSave();obMark(k);
   if(!cloud()){setSync("נשמר במכשיר הזה");return}
   if(readOnly()){setSync("צפייה בלבד: השינוי לא נשמר");return}
   clearTimeout(timers[k]);
@@ -104,8 +127,9 @@ async function flush(k){
   try{
     if(k==="event"||k==="budget"){const {error}=await sb.from("events").update(eventRow()).eq("id",eventId);if(error)throw error}
     for(const t of MODULE_TABLES[k])await syncTable(t);
+    if(!dirty[k])obDone(k);
     setSync("נשמר ✓");
-  }catch(e){console.error(e);setSync("השמירה נכשלה. בדקו חיבור והרשאות");}
+  }catch(e){console.error(e);setSync(navigator.onLine?"השמירה נכשלה. השינוי שמור במכשיר וננסה שוב":"אין חיבור. השינויים שמורים במכשיר ויישלחו כשהחיבור יחזור");}
   writing[k]=false;
   if(dirty[k]){dirty[k]=false;flush(k)}
   else if(refetchQueued[k]){refetchQueued[k]=false;refetch(k)}
@@ -156,6 +180,7 @@ async function loadEvent(id){
   T.vendor_payments.apply(res[tabs.indexOf("vendor_payments")]);
   tabs.forEach(t=>remember(t));
   anyDoc=true;loaded=true;subscribe();
+  setTimeout(obReplay,0);
   setSync(myRole==="viewer"?"צפייה בלבד":"מסונכרן");
   render();
 }
@@ -185,16 +210,61 @@ async function newCloudEvent(st){
   return true;
 }
 
+/* ---------- זיהוי פנים / טביעת אצבע (WebAuthn, מפתח שנשמר במכשיר) ---------- */
+let locked=false, bioOk=false, bioOffer=false;
+const b64u=b=>btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+const unb64u=t=>Uint8Array.from(atob(t.replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0));
+const rnd=n=>crypto.getRandomValues(new Uint8Array(n));
+function bioGet(){try{return JSON.parse(localStorage.getItem("chuppah-bio")||"{}")}catch(e){return{}}}
+function bioSet(o){try{localStorage.setItem("chuppah-bio",JSON.stringify(o))}catch(e){}}
+const myEmail=()=>((session&&session.user.email)||"").toLowerCase();
+const bioFor=em=>em?bioGet()[em]:null;
+async function bioCheck(){try{bioOk=!!(window.PublicKeyCredential&&window.isSecureContext&&await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable())}catch(e){bioOk=false}}
+async function bioEnable(){
+  try{const cred=await navigator.credentials.create({publicKey:{challenge:rnd(32),rp:{name:"חופה"},
+      user:{id:rnd(16),name:isParents()?"חופה · הורים":"חופה · הזוג",displayName:isParents()?"הורים":"הזוג"},
+      pubKeyCredParams:[{type:"public-key",alg:-7},{type:"public-key",alg:-257}],
+      authenticatorSelection:{authenticatorAttachment:"platform",userVerification:"required",residentKey:"discouraged"},timeout:60000}});
+    const o=bioGet();o[myEmail()]={id:b64u(cred.rawId),at:Date.now()};bioSet(o);bioOffer=false;toast("זיהוי הפנים הופעל במכשיר הזה");render()
+  }catch(e){console.warn(e);toast("ההפעלה בוטלה או לא נתמכת במכשיר")}}
+function bioDisable(){const o=bioGet();delete o[myEmail()];bioSet(o);toast("זיהוי הפנים כובה");render()}
+async function bioUnlock(){const c=bioFor(myEmail());if(!c)return;const msg=$("#u-msg");if(msg)msg.textContent="";
+  try{await navigator.credentials.get({publicKey:{challenge:rnd(32),allowCredentials:[{type:"public-key",id:unb64u(c.id)}],userVerification:"required",timeout:60000}});
+    locked=false;if(!eventId&&!memberships.length)await afterLogin();else render()
+  }catch(e){console.warn(e);if(msg)msg.textContent="הזיהוי לא הצליח. נסו שוב, או היכנסו עם סיסמה."}}
+const FACE_SVG=`<svg viewBox="0 0 48 48" width="64" height="64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15V10a4 4 0 0 1 4-4h5M33 6h5a4 4 0 0 1 4 4v5M42 33v5a4 4 0 0 1-4 4h-5M15 42h-5a4 4 0 0 1-4-4v-5"/><path d="M17 18v3M31 18v3M24 19v7h-2M18 31c3.5 3 8.5 3 12 0"/></svg>`;
+function unlockView(){return `<div class="welcome">
+  <div class="kicker">${esc(CFG.coupleLine||"עמית וטל מתחתנים")}</div><h1>חופה</h1><p class="lead" style="font-size:18px">יחד כל הדרך.</p>
+  <div class="panel" style="max-width:420px;text-align:center"><div class="bio-ico" aria-hidden="true">${FACE_SVG}</div>
+  <h2>${isParents()?"שלום להורים":"שלום לזוג"}</h2><p class="small muted">היכנסו עם זיהוי פנים או טביעת אצבע.</p>
+  <button class="btn pri" data-act="bio-unlock" style="width:100%;justify-content:center">כניסה עם זיהוי פנים</button>
+  <p class="small" id="u-msg" style="margin:10px 0 0;color:var(--accent)"></p>
+  <button class="btn sm" data-act="logout" style="margin-top:12px">כניסה עם סיסמה</button></div></div>`}
+function bioPanel(){if(!cloud()||!session)return"";const on=!!bioFor(myEmail());
+  if(!bioOk)return `<section class="panel"><h2>זיהוי פנים</h2><p class="small muted">המכשיר או הדפדפן הזה לא תומכים בזיהוי פנים או טביעת אצבע. אפשר להמשיך עם הסיסמה.</p></section>`;
+  return `<section class="panel"><h2>זיהוי פנים</h2><p class="small muted">במקום להקליד סיסמה, האפליקציה תיפתח עם זיהוי פנים (Face ID) או טביעת אצבע של המכשיר הזה. ההגדרה נשמרת לכל מכשיר בנפרד.</p>
+  <div class="row" style="margin-top:8px">${on?`<span class="pill p-acc">פעיל במכשיר הזה</span><button class="btn sm" data-act="lock">נעילה עכשיו</button><button class="btn sm" data-act="bio-off">כיבוי</button>`:`<button class="btn pri sm" data-act="bio-enable">הפעלת זיהוי פנים</button>`}</div></section>`}
+document.addEventListener("click",ev=>{const el=ev.target.closest("[data-act]");if(!el)return;const a=el.dataset.act;
+  if(a==="bio-enable")bioEnable();
+  if(a==="bio-off")bioDisable();
+  if(a==="bio-unlock")bioUnlock();
+  if(a==="bio-later"){bioOffer=false;try{localStorage.setItem("chuppah-bio-skip","1")}catch(e){}render()}
+  if(a==="lock"){locked=true;render()}
+});
+document.addEventListener("visibilitychange",()=>{if(document.hidden){window.__hid=Date.now()}else if(window.__hid&&Date.now()-window.__hid>10*60*1000&&session&&bioOk&&bioFor(myEmail())){locked=true;render()}});
+
 async function boot(){
   try{const t=localStorage.getItem("chuppah-view");if(t&&VIEWS.some(v=>v[0]===t))view=t}catch(e){}
   const h=location.hash.slice(1);if(VIEWS.some(v=>v[0]===h))view=h;
   if(CFG.supabaseUrl&&CFG.supabaseAnonKey&&window.supabase){
     sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseAnonKey);
+    await bioCheck();
     const {data}=await sb.auth.getSession();session=data.session;
+    if(session&&bioOk&&bioFor(myEmail()))locked=true;
     sb.auth.onAuthStateChange((ev,s)=>{const was=session;session=s;
-      if(ev==="SIGNED_IN"&&!was){afterLogin()}
+      if(ev==="SIGNED_IN"&&!was){let skip=false;try{skip=!!localStorage.getItem("chuppah-bio-skip")}catch(e){}bioOffer=bioOk&&!bioFor(myEmail())&&!skip;afterLogin()}
       if(ev==="SIGNED_OUT"){eventId=null;S=blank();anyDoc=false;render()}});
-    if(session)await afterLogin();else{loaded=true;setSync("");render()}
+    if(session&&!locked)await afterLogin();else{loaded=true;setSync("");render()}
     return;
   }
   const l=lsLoad(); if(l){S=Object.assign(blank(),l);anyDoc=true}
@@ -222,7 +292,7 @@ document.addEventListener("submit",async ev=>{if(ev.target.id!=="login")return;e
   msg.textContent="הסיסמה לא נכונה. נסו שוב.";});
 const isParents=()=>cloud()&&session&&CFG.parentsEmail&&session.user.email&&session.user.email.toLowerCase()===CFG.parentsEmail.toLowerCase();
 const readOnly=()=>cloud()&&(myRole==="viewer"||isParents());
-const RO_OK=new Set(["nav","rfilter","vfilter","entry-list","entry-copy","guest-copy","logout","modal-close","modal-bg","export","switch-event","t-showdone","gift-came"]);
+const RO_OK=new Set(["bio-enable","bio-off","bio-unlock","bio-later","lock","nav","rfilter","vfilter","entry-list","entry-copy","guest-copy","logout","modal-close","modal-bg","export","switch-event","t-showdone","gift-came"]);
 function lockForViewer(){
   if(!readOnly())return;
   document.querySelectorAll("#view button,#view input,#view select,#view textarea").forEach(el=>{
@@ -245,7 +315,7 @@ document.addEventListener("submit",async ev=>{if(ev.target.dataset.form!=="invit
 document.addEventListener("click",async ev=>{const el=ev.target.closest("[data-act]");if(!el)return;const a=el.dataset.act;
   if(a==="inv-del"){await sb.from("event_invites").delete().eq("id",el.dataset.id);sharingPanel()}
   if(a==="mem-del"){await sb.from("event_members").delete().eq("event_id",eventId).eq("user_id",el.dataset.id);sharingPanel()}
-  if(a==="logout"){await sb.auth.signOut();try{localStorage.removeItem("chuppah-event")}catch(e){}}
+  if(a==="logout"){flushNow();for(let i=0;i<20&&Object.values(writing).some(Boolean);i++)await new Promise(r=>setTimeout(r,150));locked=false;await sb.auth.signOut();try{localStorage.removeItem("chuppah-event")}catch(e){}}
   if(a==="switch-event"){await loadEvent(el.dataset.id);view="home";render()}
   if(a==="new-event"){if(channel)sb.removeChannel(channel);eventId=null;S=blank();anyDoc=false;render()}
 });
@@ -304,6 +374,7 @@ function seatedCount(tid){return G().filter(g=>g.table===tid).reduce((a,g)=>a+se
 function render(){
   if(!loaded)return;
   if(cloud()&&!session){$("#nav").innerHTML="";$("#couple").textContent=CFG.coupleLine||"עמית וטל מתחתנים";$("#count").innerHTML="";$("#view").innerHTML=loginView();return}
+  if(cloud()&&locked){$("#nav").innerHTML="";$("#couple").textContent=CFG.coupleLine||"עמית וטל מתחתנים";$("#count").innerHTML="";$("#view").innerHTML=unlockView();return}
   const e=E();
   $("#couple").textContent=CFG.coupleLine||(e.groom&&e.bride?`${e.groom} ו${e.bride} מתחתנים`:"עמית וטל מתחתנים");
   const d=daysTo(e.date);
@@ -317,7 +388,7 @@ function render(){
     if(k==="rsvp"){const p=G().filter(g=>g.status==="pending").length;if(p)b=p}
     return `<button data-act="nav" data-v="${k}" ${k===view?'aria-current="page"':""}><span>${l}</span>${b?`<span class="badge">${b}</span>`:""}</button>`}).join("");
   const fn={venue:vVenue,home:vHome,guests:vGuests,rsvp:vRsvp,seating:vSeating,gifts:vGifts,vendors:vVendors,budget:vBudget,tasks:vTasks,day:vDay,settings:vSettings}[view]||vHome;
-  $("#view").innerHTML=(readOnly()?`<div class="banner"><span>מצב צפייה בלבד. כל השינויים נעשים על ידי הזוג.</span><button class="btn sm" data-act="logout" style="margin-inline-start:auto">יציאה</button></div>`:"")+(e.sample&&!readOnly()?`<div class="banner"><span>אתם צופים בנתוני דוגמה. נסו הכול בחופשיות.</span><button class="btn sm pri" data-act="fresh">התחילו עם החתונה שלכם</button></div>`:"")+fn();
+  $("#view").innerHTML=(bioOffer&&cloud()&&session&&!bioFor(myEmail())?`<div class="banner"><span>רוצים להיכנס בפעם הבאה עם זיהוי פנים במקום סיסמה?</span><button class="btn sm pri" data-act="bio-enable" style="margin-inline-start:auto">הפעלה</button><button class="btn sm" data-act="bio-later">לא עכשיו</button></div>`:"")+(readOnly()?`<div class="banner"><span>מצב צפייה בלבד. כל השינויים נעשים על ידי הזוג.</span><button class="btn sm" data-act="logout" style="margin-inline-start:auto">יציאה</button></div>`:"")+(e.sample&&!readOnly()?`<div class="banner"><span>אתם צופים בנתוני דוגמה. נסו הכול בחופשיות.</span><button class="btn sm pri" data-act="fresh">התחילו עם החתונה שלכם</button></div>`:"")+fn();
   if(view==="settings")sharingPanel();
   lockForViewer();
 }
@@ -605,6 +676,7 @@ function vSettings(){const e=E();
   <section class="panel"><h2>החשבון שלי</h2><div class="pay"><span dir="ltr">${esc(session&&session.user.email)}</span><button class="btn sm" data-act="logout" style="margin-inline-start:auto">יציאה</button></div>
   ${memberships.length>1?`<h3 style="margin-top:12px">האירועים שלי</h3>${memberships.map(m=>`<div class="pay"><span>${esc((m.events&&(m.events.groom+" ו"+m.events.bride))||"אירוע")}</span><span class="small muted">${fdate(m.events&&m.events.date)}</span>${m.event_id===eventId?`<span class="pill p-acc" style="margin-inline-start:auto">פתוח</span>`:`<button class="btn sm" style="margin-inline-start:auto" data-act="switch-event" data-id="${m.event_id}">מעבר</button>`}</div>`).join("")}`:""}
   <div class="row" style="margin-top:10px"><button class="btn sm" data-act="new-event">יצירת אירוע נוסף</button></div></section>`:`<section class="panel"><h2>מצב מקומי</h2><p class="small muted">האתר עדיין לא מחובר למסד נתונים, ולכן הנתונים נשמרים רק בדפדפן הזה. אחרי חיבור ל-Supabase (ראו README) תקבלו התחברות, שיתוף וסנכרון.</p></section>`}
+  ${bioPanel()}
   <section class="panel"><h2>גיבוי והעברה</h2><p class="small muted">הנתונים נשמרים אוטומטית. לגיבוי נוסף אפשר להעתיק את כל הנתונים.</p>
   <div class="row"><button class="btn" data-act="export">העתקת כל הנתונים</button><button class="btn" data-act="import">שחזור מגיבוי</button></div></section>
   <section class="panel"><h2>התחלה מחדש</h2><div class="row"><button class="btn" data-act="sample">טעינת נתוני דוגמה</button><button class="btn danger" data-act="fresh">${cloud()?"מחיקת האירוע":"מחיקת הכול והתחלה מאפס"}</button></div></section></div>`;
