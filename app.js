@@ -97,12 +97,17 @@ window.addEventListener("beforeunload",ev=>{flushNow();if(cloud()&&Object.values
 window.addEventListener("online",()=>{if(cloud()&&eventId)obReplay()});
 setInterval(()=>{if(cloud()&&eventId&&navigator.onLine&&!Object.values(timers).some(Boolean)&&!Object.values(writing).some(Boolean))obReplay()},30000);
 /* ---------- עדכון גירסה: שומרים הכול ורק אז מרעננים ---------- */
-const APP_VERSION="2026.11.03-4";
-async function checkVersion(){try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const j=await r.json();
-  if(j.version&&j.version!==APP_VERSION&&!document.getElementById("upd")){flushNow();const d=document.createElement("div");d.id="upd";d.className="toast";d.style.cssText="cursor:pointer;animation:none";
-    d.textContent="יש גירסה חדשה. השינויים שלכם שמורים. לחצו לעדכון";d.onclick=async()=>{d.textContent="שומר ומעדכן…";flushNow();
-      for(let i=0;i<40&&(Object.values(writing).some(Boolean)||Object.values(timers).some(Boolean));i++)await new Promise(r=>setTimeout(r,150));location.reload()};document.body.appendChild(d)}}catch(e){}}
-setInterval(checkVersion,5*60*1000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkVersion()});
+const APP_VERSION="2026.11.03-5";
+let updating=false;
+const busy=()=>Object.values(writing).some(Boolean)||Object.values(timers).some(Boolean);
+async function checkVersion(){if(updating)return;try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const j=await r.json();
+  if(!j.version||j.version===APP_VERSION)return;
+  const a=document.activeElement;const typing=a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)&&$("#view").contains(a);
+  if(typing||$("#modal-root").firstChild){setTimeout(checkVersion,15000);return}
+  updating=true;flushNow();const d=document.createElement("div");d.className="toast";d.style.animation="none";d.textContent="מעדכן לגירסה החדשה. הנתונים שמורים…";document.body.appendChild(d);
+  for(let i=0;i<60&&busy();i++)await new Promise(r=>setTimeout(r,150));
+  const u=new URL(location.href);u.searchParams.set("v",j.version);location.replace(u.toString())}catch(e){}}
+setInterval(checkVersion,60*1000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkVersion()});setTimeout(checkVersion,3000);
 function save(k){
   lsSave();obMark(k);
   if(!cloud()){setSync("נשמר במכשיר הזה");return}
@@ -167,15 +172,21 @@ function subscribe(){
     channel.on("postgres_changes",{event:"DELETE",schema:"public",table:t},p=>{const id=p.old&&p.old.id;if(id&&synced[t]&&synced[t].has(id))later(TABLE_MODULE[t])});
   });
   channel.on("postgres_changes",{event:"UPDATE",schema:"public",table:"events",filter:"id=eq."+eventId},()=>{later("event")});
-  channel.subscribe(st=>{if(st==="SUBSCRIBED"){channel.track({who:isParents()?"הורים":"הזוג",at:Date.now()});setSync("מחובר בזמן אמת ✓")}
+  channel.subscribe(st=>{if(st==="SUBSCRIBED"){trackMe();setSync("מחובר בזמן אמת ✓")}
     if(st==="CHANNEL_ERROR"||st==="TIMED_OUT"){setSync("החיבור בזמן אמת התנתק, מתחבר מחדש…");setTimeout(()=>{if(eventId&&session)subscribe()},3000)}});
 }
 const myWrite={};
 const TAB_ID=Math.random().toString(36).slice(2,10);
-function showOnline(list){const el=$("#online");if(!el)return;const n=list.length;
-  if(n<2){el.hidden=true;return}
-  const c={};list.forEach(x=>{c[x.who]=(c[x.who]||0)+1});
-  el.textContent=`${n} מחוברים עכשיו`;el.title=Object.entries(c).map(([w,k])=>k>1?`${w} (${k})`:w).join(" · ");el.hidden=false}
+function meName(){try{return localStorage.getItem("chuppah-me:"+myEmail())||""}catch(e){return""}}
+const roleLabel=()=>isParents()?"הורים":"הזוג";
+function trackMe(){try{if(channel)channel.track({who:meName()||roleLabel(),role:roleLabel(),tab:TAB_ID,at:Date.now()})}catch(e){}}
+let onlineList=[];
+function showOnline(list){onlineList=list||onlineList;const el=$("#online");if(!el)return;
+  if(!cloud()||!session||locked||!eventId){el.hidden=true;return}
+  const seen=new Map();onlineList.forEach(x=>{if(!x)return;const k=x.who||x.role||"אורח";const me=x.tab===TAB_ID;const c=seen.get(k)||{n:0,me:false,role:x.role};c.n++;c.me=c.me||me;seen.set(k,c)});
+  if(!seen.size)seen.set(meName()||roleLabel(),{n:1,me:true,role:roleLabel()});
+  const chips=[...seen.entries()].sort((a,b)=>(b[1].me-a[1].me)).map(([w,c])=>`<span class="who${c.me?" me":""}" title="${esc(c.role||"")}"><i>${esc((w||"?").trim().charAt(0))}</i>${esc(w)}${c.me?" (אני)":""}${c.n>1?` ×${c.n}`:""}</span>`).join("");
+  el.innerHTML=`<b>מחוברים עכשיו:</b>${chips}`;el.hidden=false}
 async function loadEvent(id){
   eventId=id;synced={};S=blank();
   try{localStorage.setItem("chuppah-event",id)}catch(e){}
@@ -239,7 +250,7 @@ async function bioEnable(){
 function bioDisable(){const o=bioGet();delete o[myEmail()];bioSet(o);toast("זיהוי הפנים כובה");render()}
 async function bioUnlock(){const c=bioFor(myEmail());if(!c)return;const msg=$("#u-msg");if(msg)msg.textContent="";
   try{await navigator.credentials.get({publicKey:{challenge:rnd(32),allowCredentials:[{type:"public-key",id:unb64u(c.id)}],userVerification:"required",timeout:60000}});
-    locked=false;if(!eventId&&!memberships.length)await afterLogin();else render()
+    locked=false;if(!eventId&&!memberships.length)await afterLogin();else{render();trackMe();showOnline()}
   }catch(e){console.warn(e);if(msg)msg.textContent="הזיהוי לא הצליח. נסו שוב, או היכנסו עם סיסמה."}}
 const FACE_SVG=`<svg viewBox="0 0 48 48" width="64" height="64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15V10a4 4 0 0 1 4-4h5M33 6h5a4 4 0 0 1 4 4v5M42 33v5a4 4 0 0 1-4 4h-5M15 42h-5a4 4 0 0 1-4-4v-5"/><path d="M17 18v3M31 18v3M24 19v7h-2M18 31c3.5 3 8.5 3 12 0"/></svg>`;
 function unlockView(){return `<div class="welcome">
@@ -258,9 +269,13 @@ document.addEventListener("click",ev=>{const el=ev.target.closest("[data-act]");
   if(a==="bio-off")bioDisable();
   if(a==="bio-unlock")bioUnlock();
   if(a==="bio-later"){bioOffer=false;try{localStorage.setItem("chuppah-bio-skip","1")}catch(e){}render()}
-  if(a==="lock"){locked=true;render()}
+  if(a==="lock"){locked=true;render();showOnline()}
+  if(a==="me-set"){const n=(el.dataset.name||($("#me-in")&&$("#me-in").value)||"").trim();if(!n)return;try{localStorage.setItem("chuppah-me:"+myEmail(),n)}catch(e){}trackMe();render();showOnline()}
 });
-document.addEventListener("visibilitychange",()=>{if(document.hidden){window.__hid=Date.now()}else if(window.__hid&&Date.now()-window.__hid>10*60*1000&&session&&bioOk&&bioFor(myEmail())){locked=true;render()}});
+// כל כניסה מחדש דורשת זיהוי: חזרה אחרי 5 דקות ברקע נועלת (זיהוי פנים) או מחזירה למסך הסיסמה
+async function relock(){if(!session)return;flushNow();if(bioOk&&bioFor(myEmail())){locked=true;render();showOnline()}else{for(let i=0;i<20&&Object.values(writing).some(Boolean);i++)await new Promise(r=>setTimeout(r,150));await sb.auth.signOut({scope:"local"})}}
+document.addEventListener("visibilitychange",()=>{if(document.hidden){window.__hid=Date.now()}else if(window.__hid&&Date.now()-window.__hid>5*60*1000)relock()});
+window.addEventListener("pageshow",ev=>{if(ev.persisted&&session)relock()});
 
 async function boot(){
   try{const t=localStorage.getItem("chuppah-view");if(t&&VIEWS.some(v=>v[0]===t))view=t}catch(e){}
@@ -270,9 +285,10 @@ async function boot(){
     await bioCheck();
     const {data}=await sb.auth.getSession();session=data.session;
     if(session&&bioOk&&bioFor(myEmail()))locked=true;
+    else if(session){await sb.auth.signOut({scope:"local"});session=null}
     sb.auth.onAuthStateChange((ev,s)=>{const was=session;session=s;
       if(ev==="SIGNED_IN"&&!was){let skip=false;try{skip=!!localStorage.getItem("chuppah-bio-skip")}catch(e){}bioOffer=bioOk&&!bioFor(myEmail())&&!skip;afterLogin()}
-      if(ev==="SIGNED_OUT"){eventId=null;S=blank();anyDoc=false;render()}});
+      if(ev==="SIGNED_OUT"){onlineList=[];if(channel){try{sb.removeChannel(channel)}catch(e){}channel=null}showOnline();eventId=null;S=blank();anyDoc=false;render()}});
     if(session&&!locked)await afterLogin();else{loaded=true;setSync("");render()}
     return;
   }
@@ -301,7 +317,7 @@ document.addEventListener("submit",async ev=>{if(ev.target.id!=="login")return;e
   msg.textContent="הסיסמה לא נכונה. נסו שוב.";});
 const isParents=()=>cloud()&&session&&CFG.parentsEmail&&session.user.email&&session.user.email.toLowerCase()===CFG.parentsEmail.toLowerCase();
 const readOnly=()=>cloud()&&(myRole==="viewer"||isParents());
-const RO_OK=new Set(["bio-enable","bio-off","bio-unlock","bio-later","lock","nav","rfilter","vfilter","entry-list","entry-copy","guest-copy","logout","modal-close","modal-bg","export","switch-event","t-showdone","gift-came"]);
+const RO_OK=new Set(["me-set","me-in","me-change","bio-enable","bio-off","bio-unlock","bio-later","lock","nav","rfilter","vfilter","entry-list","entry-copy","guest-copy","logout","modal-close","modal-bg","export","switch-event","t-showdone","gift-came"]);
 function lockForViewer(){
   if(!readOnly())return;
   document.querySelectorAll("#view button,#view input,#view select,#view textarea").forEach(el=>{
@@ -395,9 +411,10 @@ function render(){
   $("#nav").innerHTML=VIEWS.map(([k,l])=>{let b="";
     if(k==="home"&&al.length)b=al.length;
     if(k==="rsvp"){const p=G().filter(g=>g.status==="pending").length;if(p)b=p}
-    return `<button data-act="nav" data-v="${k}" ${k===view?'aria-current="page"':""}><span>${l}</span>${b?`<span class="badge">${b}</span>`:""}</button>`}).join("");
+    return `<button data-act="nav" data-v="${k}" ${k===view?'aria-current="page"':""}><span>${l}</span>${b?`<span class="badge" title="${k==="home"?b+" דברים דורשים תשומת לב":k==="rsvp"?b+" מוזמנים עוד לא ענו":""}">${b}</span>`:""}</button>`}).join("");
   const fn={venue:vVenue,home:vHome,guests:vGuests,rsvp:vRsvp,seating:vSeating,gifts:vGifts,vendors:vVendors,budget:vBudget,tasks:vTasks,day:vDay,settings:vSettings}[view]||vHome;
-  $("#view").innerHTML=(bioOffer&&cloud()&&session&&!bioFor(myEmail())?`<div class="banner"><span>רוצים להיכנס בפעם הבאה עם זיהוי פנים במקום סיסמה?</span><button class="btn sm pri" data-act="bio-enable" style="margin-inline-start:auto">הפעלה</button><button class="btn sm" data-act="bio-later">לא עכשיו</button></div>`:"")+(readOnly()?`<div class="banner"><span>מצב צפייה בלבד. כל השינויים נעשים על ידי הזוג.</span><button class="btn sm" data-act="logout" style="margin-inline-start:auto">יציאה</button></div>`:"")+(e.sample&&!readOnly()?`<div class="banner"><span>אתם צופים בנתוני דוגמה. נסו הכול בחופשיות.</span><button class="btn sm pri" data-act="fresh">התחילו עם החתונה שלכם</button></div>`:"")+fn();
+  const e2=E();const sugg=isParents()?["הורי החתן","הורי הכלה"]:[e2.groom,e2.bride].filter(Boolean);
+  $("#view").innerHTML=(cloud()&&session&&!meName()?`<div class="banner"><span>איך לקרוא לך? השם יופיע לשאר המחוברים.</span><span class="row" style="gap:6px;margin-inline-start:auto">${sugg.map(n=>`<button class="btn sm pri" data-act="me-set" data-name="${esc(n)}">${esc(n)}</button>`).join("")}<input id="me-in" type="text" placeholder="שם אחר" style="width:110px"><button class="btn sm" data-act="me-set">שמירה</button></span></div>`:"")+(bioOffer&&cloud()&&session&&!bioFor(myEmail())?`<div class="banner"><span>רוצים להיכנס בפעם הבאה עם זיהוי פנים במקום סיסמה?</span><button class="btn sm pri" data-act="bio-enable" style="margin-inline-start:auto">הפעלה</button><button class="btn sm" data-act="bio-later">לא עכשיו</button></div>`:"")+(readOnly()?`<div class="banner"><span>מצב צפייה בלבד. כל השינויים נעשים על ידי הזוג.</span><button class="btn sm" data-act="logout" style="margin-inline-start:auto">יציאה</button></div>`:"")+(e.sample&&!readOnly()?`<div class="banner"><span>אתם צופים בנתוני דוגמה. נסו הכול בחופשיות.</span><button class="btn sm pri" data-act="fresh">התחילו עם החתונה שלכם</button></div>`:"")+fn();
   if(view==="settings")sharingPanel();
   lockForViewer();
 }
