@@ -194,7 +194,6 @@ begin
   from event_invites i where lower(i.email) = lower(auth.email())
   on conflict (event_id, user_id) do nothing;
   get diagnostics n = row_count;
-  delete from event_invites where lower(email) = lower(auth.email());
   return n;
 end $$;
 
