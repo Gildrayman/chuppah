@@ -165,3 +165,14 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
 .logo{width:52px;height:52px;border-radius:50%;object-fit:cover;box-shadow:0 1px 4px rgba(120,80,50,.18);flex:none}
 .hero-logo{display:block;width:min(220px,60vw);height:auto;border-radius:50%;margin:8px 0 14px;box-shadow:0 6px 24px rgba(150,100,70,.18)}
 .welcome .kicker{display:block;margin-bottom:4px}
+.cbox{border:1px dashed var(--accent);background:var(--accent-soft);border-radius:var(--r);padding:12px;margin-bottom:14px}
+.cthumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.cthumb{width:64px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--line);background:var(--surface)}
+.cthumb.pdf{display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;color:var(--accent);font-size:13px}
+.cthumb.pdf small{font-weight:400;font-size:9px;color:var(--muted);word-break:break-all;padding:0 2px;text-align:center}
+.cinfo{margin-top:10px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px}
+.cinfo h4{margin:10px 0 4px;font-size:14px}.cinfo ul{margin:0;padding-inline-start:18px}.cinfo p{margin:0 0 6px}
+.cview{display:flex;flex-direction:column;gap:10px;margin-bottom:10px}
+.cview img{width:100%;border-radius:8px;border:1px solid var(--line)}
+.cpdf{display:flex;flex-direction:column;gap:6px}.cpdf iframe{width:100%;height:60vh;border:1px solid var(--line);border-radius:8px;background:#fff}
+.linkbtn{all:unset;cursor:pointer;color:var(--bad);padding:0 4px}

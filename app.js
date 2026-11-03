@@ -60,8 +60,8 @@ const T={
     rows:()=>S.tables.items.map(t=>({id:t.id,name:String(t.name||""),seats:num(t.seats)})),
     apply:rs=>{S.tables.items=rs.map(r=>({id:r.id,name:r.name,seats:r.seats}))}},
   vendors:{
-    rows:()=>S.vendors.items.map(v=>({id:v.id,name:v.name||"",cat:v.cat||"שונות",status:v.status||"lead",price:num(v.price),contact:v.contact||"",phone:v.phone||"",notes:v.notes||"",contract_signed:!!(v.contract&&v.contract.signed),contract_checks:(v.contract&&v.contract.checks)||{}})),
-    apply:rs=>{const old=Object.fromEntries(S.vendors.items.map(v=>[v.id,v.payments||[]]));S.vendors.items=rs.map(r=>({id:r.id,name:r.name,cat:r.cat,status:r.status,price:num(r.price),contact:r.contact,phone:r.phone,notes:r.notes,contract:{signed:r.contract_signed,checks:r.contract_checks||{}},payments:old[r.id]||[]}))}},
+    rows:()=>S.vendors.items.map(v=>({id:v.id,name:v.name||"",cat:v.cat||"שונות",status:v.status||"lead",price:num(v.price),contact:v.contact||"",phone:v.phone||"",notes:v.notes||"",email:v.email||"",address:v.address||"",contract_file:{files:v.contractFiles||[]},contract_info:v.contractInfo||{},contract_signed:!!(v.contract&&v.contract.signed),contract_checks:(v.contract&&v.contract.checks)||{}})),
+    apply:rs=>{const old=Object.fromEntries(S.vendors.items.map(v=>[v.id,v.payments||[]]));S.vendors.items=rs.map(r=>({id:r.id,name:r.name,cat:r.cat,status:r.status,price:num(r.price),contact:r.contact,phone:r.phone,notes:r.notes,email:r.email||"",address:r.address||"",contractFiles:(r.contract_file&&r.contract_file.files)||[],contractInfo:r.contract_info&&Object.keys(r.contract_info).length?r.contract_info:null,contract:{signed:r.contract_signed,checks:r.contract_checks||{}},payments:old[r.id]||[]}))}},
   vendor_payments:{
     rows:()=>S.vendors.items.flatMap(v=>(v.payments||[]).map(p=>({id:p.id,vendor_id:v.id,label:p.label||"תשלום",amount:num(p.amount),due:nz(p.due),paid:!!p.paid,payer:p.payer||""}))),
     apply:rs=>{const by={};rs.forEach(r=>(by[r.vendor_id]=by[r.vendor_id]||[]).push({id:r.id,label:r.label,amount:num(r.amount),due:r.due||"",paid:r.paid,payer:r.payer}));S.vendors.items.forEach(v=>v.payments=(by[v.id]||[]).sort((a,b)=>(a.due||"9").localeCompare(b.due||"9")))}},
@@ -97,7 +97,7 @@ window.addEventListener("beforeunload",ev=>{flushNow();if(cloud()&&Object.values
 window.addEventListener("online",()=>{if(cloud()&&eventId)obReplay()});
 setInterval(()=>{if(cloud()&&eventId&&navigator.onLine&&!Object.values(timers).some(Boolean)&&!Object.values(writing).some(Boolean))obReplay()},30000);
 /* ---------- עדכון גירסה: שומרים הכול ורק אז מרעננים ---------- */
-const APP_VERSION="2026.11.03-13";
+const APP_VERSION="2026.11.03-14";
 let updating=false;
 const busy=()=>Object.values(writing).some(Boolean)||Object.values(timers).some(Boolean);
 async function checkVersion(){if(updating)return;try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const j=await r.json();
@@ -318,7 +318,7 @@ document.addEventListener("submit",async ev=>{if(ev.target.id!=="login")return;e
   msg.textContent="הסיסמה לא נכונה. נסו שוב.";});
 const isParents=()=>cloud()&&session&&CFG.parentsEmail&&session.user.email&&session.user.email.toLowerCase()===CFG.parentsEmail.toLowerCase();
 const readOnly=()=>cloud()&&(myRole==="viewer"||isParents());
-const RO_OK=new Set(["me-set","me-in","me-change","bio-enable","bio-off","bio-unlock","bio-later","lock","nav","rfilter","vfilter","entry-list","entry-copy","guest-copy","logout","modal-close","modal-bg","export","switch-event","t-showdone","gift-came"]);
+const RO_OK=new Set(["contract-view","me-set","me-in","me-change","bio-enable","bio-off","bio-unlock","bio-later","lock","nav","rfilter","vfilter","entry-list","entry-copy","guest-copy","logout","modal-close","modal-bg","export","switch-event","t-showdone","gift-came"]);
 function lockForViewer(){
   if(!readOnly())return;
   document.querySelectorAll("#view button,#view input,#view select,#view textarea").forEach(el=>{
@@ -620,7 +620,7 @@ function vVendors(){
     ${pays.map(p=>`<div class="pay ${!p.paid&&p.due&&daysTo(p.due)<0?"overdue":""}"><input type="checkbox" data-act="pay-toggle" data-id="${v.id}" data-p="${p.id}" ${p.paid?"checked":""} aria-label="שולם"><span>${esc(p.label)}</span><span class="small muted">${fdate(p.due)}</span>${payerSel("payer","pp-"+p.id,p.payer,"pay-payer",`data-id="${v.id}" data-p="${p.id}" style="padding:2px 4px;font-size:12px"`)}<span class="amt">${money(p.amount)}</span><button class="btn sm ghost" data-act="pay-del" data-id="${v.id}" data-p="${p.id}" aria-label="מחק תשלום">×</button></div>`).join("")}
     <form class="row" data-form="pay" data-id="${v.id}" style="margin-top:8px"><input type="text" name="label" id="pl-${v.id}" placeholder="מקדמה / יתרה" style="width:110px"><input type="number" name="amount" id="pa-${v.id}" placeholder="סכום" style="width:90px"><input type="date" name="due" id="pd-${v.id}">${payerSel("payer","pw-"+v.id,"")}<button class="btn sm" type="submit">הוספה</button></form>
   </div></details>
-  <div class="row"><button class="btn sm" data-act="vendor-edit" data-id="${v.id}">עריכה</button>${v.phone?`<a class="btn sm ghost" href="https://wa.me/${normPhone(v.phone)}" target="_blank" rel="noopener">וואטסאפ</a>`:""}</div></article>`}).join("")||`<p class="muted">אין ספקים בקטגוריה הזו.</p>`}</div></div>`;
+  <div class="row"><button class="btn sm" data-act="vendor-edit" data-id="${v.id}">עריכה</button>${(v.contractFiles||[]).length?`<button class="btn sm" data-act="contract-view" data-id="${v.id}">📄 הצגת החוזה</button>`:""}${v.phone?`<a class="btn sm ghost" href="https://wa.me/${normPhone(v.phone)}" target="_blank" rel="noopener">וואטסאפ</a>`:""}</div></article>`}).join("")||`<p class="muted">אין ספקים בקטגוריה הזו.</p>`}</div></div>`;
 }
 
 function vBudget(){
@@ -735,17 +735,153 @@ function guestForm(g){g=g||{side:"shared",invited:2,status:"pending",priority:"A
   <label class="field wide">הערות<input type="text" name="notes" id="m-notes" value="${esc(g.notes||"")}"></label></div>`}
 function readGuest(fd,g){["name","phone","side","group","priority","status","meal","notes"].forEach(k=>g[k]=(fd.get(k)||"").toString().trim());g.invited=num(fd.get("invited"))||1;g.coming=fd.get("coming")===""?null:num(fd.get("coming"));if(g.status==="no")g.table=null;return g}
 
-function vendorForm(v){v=v||{cat:CATS[0],status:"lead"};
- return `<div class="form"><label class="field wide">שם הספק<input type="text" name="name" id="v-name" required value="${esc(v.name||"")}"></label>
+function vendorForm(v){const isNew=!v;v=v||{cat:CATS[0],status:"lead"};
+ return `${contractBox(isNew?null:v)}${!isNew&&(v.contractFiles||[]).length?`<div class="small" style="margin:-4px 0 10px">${v.contractFiles.map((f,i)=>`<span class="pill" style="margin:2px">📄 ${esc(f.name)} <button type="button" class="linkbtn" data-act="cfile-del" data-id="${v.id}" data-i="${i}" aria-label="מחיקת קובץ">✕</button></span>`).join("")}</div>`:""}<div class="form"><label class="field wide">שם הספק<input type="text" name="name" id="v-name" required value="${esc(v.name||"")}"></label>
  <label class="field">קטגוריה<select name="cat" id="v-cat">${CATS.map(c=>`<option ${v.cat===c?"selected":""}>${c}</option>`).join("")}</select></label>
  <label class="field">סטטוס<select name="status" id="v-st">${Object.entries(VSTATUS).map(([k,l])=>`<option value="${k}" ${v.status===k?"selected":""}>${l}</option>`).join("")}</select></label>
  <label class="field">מחיר כולל מע"מ (₪)<input type="number" name="price" id="v-price" value="${v.price||""}"></label>
  <label class="field">איש קשר<input type="text" name="contact" id="v-contact" value="${esc(v.contact||"")}"></label>
  <label class="field">טלפון<input type="tel" name="phone" id="v-phone" dir="ltr" value="${esc(v.phone||"")}"></label>
+ <label class="field">מייל<input type="email" name="email" id="v-email" dir="ltr" value="${esc(v.email||"")}"></label>
+ <label class="field">כתובת<input type="text" name="address" id="v-address" value="${esc(v.address||"")}"></label>
  <label class="field wide">הערות<textarea name="notes" id="v-notes" rows="3">${esc(v.notes||"")}</textarea></label></div>`}
 
 /* ---------- actions ---------- */
 function findG(id){return G().find(g=>g.id===id)}
+/* ---------- קריאת חוזה בחינם: זיהוי טקסט בדפדפן (Tesseract) + PDF (pdf.js) + כללי חילוץ ---------- */
+const OCR_LIBS={tess:"https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",pdf:"https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js",pdfw:"https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js"};
+const libLoads={};
+function loadLib(u){return libLoads[u]=libLoads[u]||new Promise((res,rej)=>{const s=document.createElement("script");s.src=u;s.onload=res;s.onerror=()=>{delete libLoads[u];rej(new Error("load "+u))};document.head.appendChild(s)})}
+let ocrWorker=null;
+async function ocrImage(src,onPct){await loadLib(OCR_LIBS.tess);
+  if(!ocrWorker){ocrWorker=await Tesseract.createWorker(["heb","eng"],1,{logger:m=>{if(m.status==="recognizing text"&&onPct)onPct(m.progress)}})}
+  const {data}=await ocrWorker.recognize(src);return data.text||""}
+async function pdfText(blob,onPct){await loadLib(OCR_LIBS.pdf);const lib=window.pdfjsLib;lib.GlobalWorkerOptions.workerSrc=OCR_LIBS.pdfw;
+  const doc=await lib.getDocument({data:await blob.arrayBuffer()}).promise;let out="";const n=Math.min(doc.numPages,10);
+  for(let i=1;i<=n;i++){const pg=await doc.getPage(i);const tc=await pg.getTextContent();
+    // group items into lines by y
+    const rows={};tc.items.forEach(it=>{const y=Math.round(it.transform[5]);(rows[y]=rows[y]||[]).push(it)});
+    let t=Object.keys(rows).sort((a,b)=>b-a).map(y=>rows[y].sort((a,b)=>b.transform[4]-a.transform[4]).map(it=>it.str).join(" ")).join("\n");
+    if(t.replace(/\s/g,"").length<40){// scanned page: render and OCR
+      const vp=pg.getViewport({scale:2});const c=document.createElement("canvas");c.width=vp.width;c.height=vp.height;await pg.render({canvasContext:c.getContext("2d"),viewport:vp}).promise;
+      t=await ocrImage(c,p=>onPct&&onPct((i-1+p)/n))}
+    out+=t+"\n";if(onPct)onPct(i/n)}
+  return out}
+const CAT_KW=[["אולם וקייטרינג",/אולם|גן אירועים|קייטרינג|מנות|סועדים|אירוח/],["צילום ווידאו",/צילום|צלם|וידאו|מגנטים|אלבום/],["מוזיקה ודיג'יי",/די ?ג'?יי|DJ|תקליטן|להקה|הגברה|מוזיק/i],["שמלה וחליפה",/שמלה|חליפה|תפירה|מדידות/],["איפור ושיער",/איפור|שיער|תסרוקת|מאפרת/],["עיצוב ופרחים",/פרחים|עיצוב|חופה|מרכזי שולחן/],["הזמנות ומדיה",/הזמנות|דפוס|הדפסה/],["טבעות",/טבעת|צורף|תכשיט/],["רב ורבנות",/רב |רבנות|עריכת חופה|קידושין/],["בר ואלכוהול",/בר |ברמן|אלכוהול|קוקטייל/],["הסעות",/הסע|אוטובוס|מיניבוס/]];
+function toNum(s){return num(String(s).replace(/[,\s]/g,""))}
+function toISO(d,m,y){y=+y;if(y<100)y+=2000;d=+d;m=+m;if(!(d>=1&&d<=31&&m>=1&&m<=12&&y>=2020&&y<=2040))return"";return `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`}
+const DATE_RE=/(\d{1,2})[./\-](\d{1,2})[./\-](\d{2,4})/;
+const AMT_RE=/(?:₪|ש["״']?ח|NIS)\s*([\d,]{2,}(?:\.\d+)?)|([\d,]{2,}(?:\.\d+)?)\s*(?:₪|ש["״']?ח|שקלים|שקל|ש"ח)/;
+function amtIn(line){const m=line.match(AMT_RE);if(m)return toNum(m[1]||m[2]);const n=line.match(/\b(\d{1,3}(?:,\d{3})+|\d{3,6})\b/);return n?toNum(n[1]):0}
+function parseContract(raw){
+  const text=raw.replace(/[‎‏]/g,"").replace(/[ \t]+/g," ");
+  const lines=text.split(/\n+/).map(l=>l.trim()).filter(l=>l.length>1);
+  const all=lines.join("\n");const i={payments:[],terms:[],included:[]};
+  const em=all.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);if(em)i.email=em[0];
+  const bid=all.match(/(?:ח\.?\s?פ\.?|ע\.?\s?מ\.?|עוסק מורשה|ת\.?\s?ז\.?)\D{0,6}(\d{8,9})/);if(bid)i.business_id=bid[1];
+  const ph=[...all.matchAll(/(?:\+?972[-\s]?|0)(5\d|[23489]|7\d)[-\s]?\d{3}[-\s]?\d{4}/g)].map(m=>m[0]).filter(p=>!i.business_id||p.replace(/\D/g,"")!==i.business_id);if(ph.length)i.phone=ph[0].replace(/\s/g,"");
+  const cp=all.match(/(?:איש קשר|שם איש הקשר|נציג)\s*[:\-]?\s*([^\n,|]{2,40})/);if(cp)i.contact_person=cp[1].split(/\s(?:טל['׳]?|טלפון|נייד|מייל|דוא["״]?ל|ת\.?ז)|\d/)[0].trim();
+  const ad=all.match(/(?:כתובת|רח['׳]|רחוב)\s*[:\-]?\s*([^\n|]{4,60})/);if(ad)i.address=ad[1].replace(/^[:\s]+/,"").trim();
+  // vendor name
+  const bn=all.match(/(?:בין|לבין)\s*[:\-]?\s*([^\n(,]{2,40}?)\s*(?:\(|,|ח\.?\s?פ|ע\.?\s?מ|\n)/);
+  const ltd=lines.find(l=>/בע["״]?מ/.test(l)&&l.length<60);
+  const top=lines.slice(0,4).find(l=>!/חוזה|הסכם|הצעת מחיר|תאריך|^\d|עמוד/.test(l)&&l.length<40&&/[א-תA-Za-z]/.test(l));
+  i.vendor_name=((ltd||"").replace(/^.*?:\s*/,"").split(/\s*(?:ח\.?\s?פ|ע\.?\s?מ|\(|,)/)[0]||(bn&&bn[1])||top||"").trim().slice(0,50);
+  // category
+  let best=["שונות",0];CAT_KW.forEach(([k,re])=>{const n=(all.match(new RegExp(re.source,"g"+(re.flags||"")))||[]).length;if(n>best[1])best=[k,n]});i.category=best[0];
+  // totals
+  const totLine=lines.find(l=>/סה["״]?כ|סך הכל|סך הכול|מחיר כולל|סכום כולל|עלות כוללת|סה״כ לתשלום/.test(l)&&amtIn(l));
+  if(totLine)i.total_price=amtIn(totLine);
+  const pp=lines.find(l=>/למנה|לסועד|לאורח|למוזמן|לראש/.test(l)&&amtIn(l));if(pp)i.price_per_plate=amtIn(pp);
+  const mg=all.match(/מינימום\s*(?:של\s*)?(\d{2,4})\s*(?:מנות|אורחים|סועדים|מוזמנים|איש)?/);if(mg)i.min_guests=+mg[1];
+  if(!i.total_price){const amts=lines.map(amtIn).filter(a=>a>=500);if(amts.length&&!i.price_per_plate)i.total_price=Math.max(...amts)}
+  i.price_includes_vat=/כולל מע["״]?מ/.test(all)?true:/לא כולל מע["״]?מ|\+ ?מע["״]?מ/.test(all)?false:undefined;
+  // dates
+  const ev=lines.find(l=>/(?:תאריך|מועד) ה?אירוע|יתקיים|האירוע ייערך/.test(l)&&DATE_RE.test(l))||lines.find(l=>/ביום|אירוע/.test(l)&&!/נחתם|נערך|חתימה|מקדמה|תשלום|יתרה/.test(l)&&DATE_RE.test(l));if(ev){const m=ev.match(DATE_RE);i.event_date=toISO(m[1],m[2],m[3])}
+  const tm=all.match(/(?:בשעה|שעה|שעת)\s*[:\-]?\s*(\d{1,2}:\d{2})/);if(tm)i.event_time=tm[1];
+  const sg=lines.find(l=>/נחתם|נערך ונחתם|תאריך החתימה/.test(l)&&DATE_RE.test(l));if(sg){const m=sg.match(DATE_RE);i.signed_date=toISO(m[1],m[2],m[3])}
+  // payments
+  lines.forEach(l=>{if(!/מקדמה|תשלום|יתרה|המחאה|צ['׳]ק|שיק|העברה|תשולם|ישולם/.test(l))return;const a=amtIn(l);if(!a||a<100||a===i.total_price)return;
+    const dm=l.match(DATE_RE);const label=(l.match(/מקדמה|יתרה|תשלום (?:שני|שלישי|ראשון|אחרון|\d)|תשלום/)||["תשלום"])[0];
+    i.payments.push({label,amount:a,due:dm?toISO(dm[1],dm[2],dm[3]):""})});
+  i.payments=i.payments.slice(0,8);
+  // terms & included
+  const sent=all.split(/(?<=[.;])\s+|\n/).map(s=>s.trim()).filter(s=>s.length>12&&s.length<220);
+  sent.forEach(s=>{if(/ביטול|יבוטל|דחי(י)?ת|שעות נוספות|שעה נוספת|תוספת|החזר|הצמדה|קנס|פיצוי|לא יוחזר|כוח עליון|אחריות/.test(s)&&i.terms.length<10&&!i.terms.includes(s))i.terms.push(s.slice(0,180))});
+  sent.forEach(s=>{if(/^כולל|כולל[:\s]|המחיר כולל|החבילה כוללת/.test(s)&&!/סה["״]?כ|מע["״]?מ/.test(s)&&i.included.length<8&&!i.included.includes(s))i.included.push(s.slice(0,160))});
+  i.summary=[i.vendor_name&&`ספק: ${i.vendor_name}`,i.total_price&&`מחיר: ${money(i.total_price)}`,i.price_per_plate&&`למנה: ${money(i.price_per_plate)}`,i.event_date&&`לאירוע ב-${fdate(i.event_date)}`].filter(Boolean).join(" · ");
+  return i}
+async function readContractLocally(files,onStatus){let txt="";let k=0;
+  for(const f of files){k++;const pre=files.length>1?`עמוד ${k}/${files.length}: `:"";
+    if(f.mime==="application/pdf")txt+=await pdfText(f.blob,p=>onStatus(`${pre}קורא PDF… ${Math.round(p*100)}%`));
+    else txt+=await ocrImage(f.blob,p=>onStatus(`${pre}מזהה טקסט… ${Math.round(p*100)}%`));
+    txt+="\n"}
+  return {text:txt,info:parseContract(txt)}}
+
+/* ---------- חוזי ספקים: צילום / העלאה, קריאה אוטומטית, שמירה והצגה ---------- */
+let cPending=null; // {files:[{blob,name,mime,url}], info, status}
+const MAXPX=2200;
+function fileToB64(blob){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]);r.onerror=rej;r.readAsDataURL(blob)})}
+async function shrinkImage(file){if(!/^image\//.test(file.type)||file.type==="image/gif")return file;
+  try{const bmp=await createImageBitmap(file);const s=Math.min(1,MAXPX/Math.max(bmp.width,bmp.height));
+    const c=document.createElement("canvas");c.width=Math.round(bmp.width*s);c.height=Math.round(bmp.height*s);c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);
+    const b=await new Promise(r=>c.toBlob(r,"image/jpeg",.85));return new File([b],(file.name||"photo").replace(/\.\w+$/,"")+".jpg",{type:"image/jpeg"})}catch(e){return file}}
+function contractBox(v){const files=(v&&v.contractFiles)||[];
+  if(!cloud())return `<div class="cbox"><b>חוזה</b><p class="small muted">צירוף וסריקת חוזים זמינים כשהאתר מחובר לענן.</p></div>`;
+  return `<div class="cbox" id="cbox"><div class="row" style="justify-content:space-between"><b>חוזה או הצעת מחיר</b>${files.length?`<button class="btn sm" type="button" data-act="contract-view" data-id="${v.id}">הצגת החוזה (${files.length})</button>`:""}</div>
+  <p class="small muted" style="margin:4px 0 8px">צלמו או העלו את החוזה, והפרטים ימולאו אוטומטית בטופס. אפשר לצרף כמה עמודים.</p>
+  <div class="row"><label class="btn sm pri" style="cursor:pointer">📷 צילום<input type="file" accept="image/*" capture="environment" multiple data-cfile hidden></label>
+  <label class="btn sm" style="cursor:pointer">📎 העלאת קובץ<input type="file" accept="image/*,application/pdf" multiple data-cfile hidden></label></div>
+  <div id="c-status" class="small" style="margin-top:8px"></div><div id="c-thumbs" class="cthumbs"></div><div id="c-extra"></div></div>`}
+function renderPending(){const t=$("#c-thumbs");if(!t||!cPending)return;
+  t.innerHTML=cPending.files.map((f,i)=>f.mime==="application/pdf"?`<span class="cthumb pdf">PDF<small>${esc(f.name.slice(0,14))}</small></span>`:`<img class="cthumb" src="${f.url}" alt="עמוד ${i+1}">`).join("");
+  const st=$("#c-status");if(st)st.innerHTML=cPending.status||"";
+  const ex=$("#c-extra");if(ex)ex.innerHTML=cPending.info?infoHtml(cPending.info,true):""}
+function infoHtml(i,editable){if(!i)return"";const pays=i.payments||[];
+  return `<div class="cinfo">${i.summary?`<p>${esc(i.summary)}</p>`:""}
+  ${i.event_date||i.signed_date?`<p class="small">${i.event_date?`תאריך האירוע בחוזה: <b>${fdate(i.event_date)}</b>${i.event_time?" "+esc(i.event_time):""}`:""}${i.signed_date?` · נחתם: ${fdate(i.signed_date)}`:""}</p>`:""}
+  ${i.price_per_plate?`<p class="small">מחיר למנה: <b>${money(i.price_per_plate)}</b>${i.min_guests?` · מינימום ${i.min_guests} מנות`:""}</p>`:""}
+  ${i.business_id?`<p class="small">ח.פ./ע.מ.: <span dir="ltr">${esc(i.business_id)}</span></p>`:""}
+  ${pays.length?`<h4>לוח תשלומים מהחוזה</h4>${pays.map(p=>`<div class="small">• ${esc(p.label)}: <b>${money(p.amount)}</b>${p.due?" עד "+fdate(p.due):""}</div>`).join("")}${editable?`<label class="row small" style="margin-top:4px"><input type="checkbox" name="c_pays" id="c-pays" checked> להוסיף את התשלומים ללוח התשלומים של הספק</label>`:""}`:""}
+  ${(i.included||[]).length?`<h4>מה כלול</h4><ul>${i.included.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:""}
+  ${(i.terms||[]).length?`<h4>תנאים חשובים</h4><ul>${i.terms.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:""}</div>`}
+async function onContractFiles(list){const files=[...list];if(!files.length)return;
+  cPending=cPending||{files:[]};
+  for(const f of files){if(f.size>25*1024*1024){toast("הקובץ גדול מדי (עד 25MB)");continue}
+    const g=await shrinkImage(f);cPending.files.push({blob:g,name:g.name||"contract",mime:g.type||"application/octet-stream",url:/^image\//.test(g.type)?URL.createObjectURL(g):""})}
+  cPending.status="⏳ קורא את החוזה וממלא את הפרטים…";cPending.info=null;renderPending();
+  try{const st=t=>{const el=$("#c-status");if(el)el.textContent="⏳ "+t};
+    const {info,text}=await readContractLocally(cPending.files,st);
+    if(!text.replace(/\s/g,"").length){cPending.status="לא זוהה טקסט בחוזה (אולי הצילום מטושטש). החוזה יישמר, ואפשר למלא ידנית.";renderPending();return}
+    cPending.info=info;fillVendorForm(info);cPending.status="✅ מילאנו מה שזיהינו בחוזה. בדקו ותקנו לפני השמירה.";renderPending()
+  }catch(e){console.error(e);cPending.status="לא הצלחנו לקרוא את החוזה אוטומטית. החוזה יישמר, ואפשר למלא ידנית.";renderPending()}}
+function fillVendorForm(i){const set=(id,v)=>{const el=document.getElementById(id);if(el&&v!=null&&v!==""&&v!==0)el.value=v};
+  set("v-name",i.vendor_name);if(i.category&&CATS.includes(i.category))set("v-cat",i.category);
+  set("v-contact",i.contact_person);set("v-phone",i.phone);set("v-email",i.email);set("v-address",i.address);
+  set("v-price",i.total_price||((i.payments||[]).reduce((a,p)=>a+num(p.amount),0))||"");
+  if(i.is_signed)set("v-st","closed");else if(i.total_price)set("v-st","offer");
+  const n=document.getElementById("v-notes");if(n&&!n.value&&i.summary)n.value=i.summary}
+async function uploadPending(v){if(!cPending||!cPending.files.length||!cloud()||!eventId)return;const done=[];
+  for(const f of cPending.files){const safe=(f.name||"file").replace(/[^\w.\-]+/g,"_").slice(-60);const path=`${eventId}/${v.id}/${Date.now()}-${Math.random().toString(36).slice(2,6)}-${safe}`;
+    const {error}=await sb.storage.from("contracts").upload(path,f.blob,{contentType:f.mime,upsert:false});
+    if(error){console.error(error);toast("העלאת החוזה נכשלה, נסו שוב");continue}
+    done.push({path,name:f.name,mime:f.mime,size:f.blob.size,at:new Date().toISOString()})}
+  v.contractFiles=[...(v.contractFiles||[]),...done];
+  if(cPending.info){v.contractInfo=cPending.info;v.contract=v.contract||{checks:{}};if(cPending.info.is_signed)v.contract.signed=true}
+  save("vendors");safeRender();if(done.length)toast("החוזה נשמר ✓")}
+function applyPendingPayments(v,fd){const i=cPending&&cPending.info;if(!i||!(i.payments||[]).length||!fd.get("c_pays"))return;
+  v.payments=v.payments||[];i.payments.forEach(p=>{if(!num(p.amount))return;v.payments.push({id:uid(),label:p.label||"תשלום",amount:num(p.amount),due:/^\d{4}-\d{2}-\d{2}$/.test(p.due||"")?p.due:"",payer:"",paid:false})})}
+async function viewContract(id){const v=findV(id);if(!v)return;const files=v.contractFiles||[];
+  modal("החוזה של "+(v.name||"הספק"),`<div id="cview" class="cview"><p class="muted small">טוען…</p></div>${v.contractInfo?infoHtml(v.contractInfo,false):""}`,null);
+  const out=[];for(const f of files){const {data,error}=await sb.storage.from("contracts").createSignedUrl(f.path,3600);if(error||!data){out.push(`<p class="small">${esc(f.name)}: לא נמצא</p>`);continue}
+    const u=data.signedUrl;out.push(f.mime==="application/pdf"?`<div class="cpdf"><iframe src="${u}" title="${esc(f.name)}"></iframe><a class="btn sm" href="${u}" target="_blank" rel="noopener">פתיחה במסך מלא</a></div>`:`<a href="${u}" target="_blank" rel="noopener"><img src="${u}" alt="${esc(f.name)}" loading="lazy"></a>`)}
+  const el=$("#cview");if(el)el.innerHTML=out.join("")||'<p class="muted">אין קבצים.</p>'}
+async function removeContractFiles(v){const ps=(v.contractFiles||[]).map(f=>f.path);if(ps.length&&cloud())try{await sb.storage.from("contracts").remove(ps)}catch(e){}}
+document.addEventListener("change",ev=>{const el=ev.target;if(el.matches&&el.matches("input[data-cfile]")){onContractFiles(el.files);el.value=""}});
+document.addEventListener("click",ev=>{const el=ev.target.closest("[data-act]");if(!el)return;
+  if(el.dataset.act==="contract-view"){ev.preventDefault();viewContract(el.dataset.id)}
+  if(el.dataset.act==="cfile-del"){const v=findV(el.dataset.id);const i=num(el.dataset.i);if(!v||!confirm("למחוק את הקובץ?"))return;const f=v.contractFiles[i];v.contractFiles.splice(i,1);if(f&&cloud())sb.storage.from("contracts").remove([f.path]);save("vendors");render()}});
+
 function findV(id){return S.vendors.items.find(v=>v.id===id)}
 document.addEventListener("click",ev=>{
   const el=ev.target.closest("[data-act]");if(!el)return;
@@ -777,9 +913,9 @@ document.addEventListener("click",ev=>{
     modal("רשימת כניסה לפי א-ב",`<div class="tbl-wrap" style="max-height:60vh"><table><thead><tr><th>שם</th><th class="num">אורחים</th><th class="num">שולחן</th></tr></thead><tbody>${list.map(g=>`<tr><td>${esc(g.name)}</td><td class="num">${seatsOf(g)}</td><td class="num"><b>${esc(tn(g.table))}</b></td></tr>`).join("")}</tbody></table></div>`,null,`<button class="btn" type="button" data-act="entry-copy">העתקה</button>`);break}
   case "entry-copy":{const tn=id=>(S.tables.items.find(t=>t.id===id)||{}).name;copy(G().filter(g=>g.table&&g.status!=="no").sort((a,b)=>a.name.localeCompare(b.name)).map(g=>`${g.name}\t${seatsOf(g)}\t${tn(g.table)}`).join("\n"),"הרשימה הועתקה");break}
   case "vfilter":vFilter=el.dataset.v;render();break;
-  case "vendor-add":modal("ספק חדש",vendorForm(),fd=>{const v={id:uid(),payments:[],contract:{signed:false,checks:{}}};["name","cat","status","contact","phone","notes"].forEach(k=>v[k]=(fd.get(k)||"").toString());v.price=num(fd.get("price"));S.vendors.items.push(v);save("vendors")});break;
-  case "vendor-edit":{const v=findV(id);modal("עריכת ספק",vendorForm(v),fd=>{["name","cat","status","contact","phone","notes"].forEach(k=>v[k]=(fd.get(k)||"").toString());v.price=num(fd.get("price"));save("vendors")},`<button class="btn danger" type="button" data-act="vendor-del" data-id="${id}" style="margin-inline-start:auto">מחיקה</button>`);break}
-  case "vendor-del":S.vendors.items=S.vendors.items.filter(v=>v.id!==id);save("vendors");closeModal();break;
+  case "vendor-add":cPending=null;modal("ספק חדש",vendorForm(),fd=>{const v={id:uid(),payments:[],contract:{signed:false,checks:{}}};["name","cat","status","contact","phone","email","address","notes"].forEach(k=>v[k]=(fd.get(k)||"").toString());v.price=num(fd.get("price"));applyPendingPayments(v,fd);S.vendors.items.push(v);save("vendors");uploadPending(v).then(()=>{cPending=null})});break;
+  case "vendor-edit":{const v=findV(id);cPending=null;modal("עריכת ספק",vendorForm(v),fd=>{["name","cat","status","contact","phone","email","address","notes"].forEach(k=>v[k]=(fd.get(k)||"").toString());v.price=num(fd.get("price"));applyPendingPayments(v,fd);save("vendors");uploadPending(v).then(()=>{cPending=null})},`<button class="btn danger" type="button" data-act="vendor-del" data-id="${id}" style="margin-inline-start:auto">מחיקה</button>`);break}
+  case "vendor-del":{const dv=findV(id);if(dv)removeContractFiles(dv)}S.vendors.items=S.vendors.items.filter(v=>v.id!==id);save("vendors");closeModal();break;
   case "pay-del":{const v=findV(id);v.payments=v.payments.filter(p=>p.id!==el.dataset.p);save("vendors");render();break}
   case "exp-del":S.budget.expenses=S.budget.expenses.filter(x=>x.id!==id);save("budget");render();break;
   case "task-add":modal("משימה חדשה",taskForm(),fd=>{S.tasks.items.push(readTask(fd,{id:uid(),done:false}));save("tasks")});break;

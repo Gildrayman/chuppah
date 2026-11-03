@@ -101,6 +101,10 @@ create table if not exists public.vendors (
   notes           text not null default '',
   contract_signed boolean not null default false,
   contract_checks jsonb not null default '{}'::jsonb,
+  email           text not null default '',
+  address         text not null default '',
+  contract_file   jsonb not null default '{}'::jsonb,   -- {files:[{path,name,mime,size,at}]} in storage bucket 'contracts'
+  contract_info   jsonb not null default '{}'::jsonb,   -- details read from the contract
   updated_at      timestamptz not null default now()
 );
 create index if not exists vendors_event_idx on public.vendors(event_id);
@@ -263,3 +267,12 @@ begin
     end;
   end loop;
 end $$;
+
+-- ---------- contract files (Supabase Storage) ----------
+insert into storage.buckets (id, name, public, file_size_limit) values ('contracts','contracts',false, 20971520) on conflict (id) do nothing;
+create or replace function public.contract_event(objname text) returns uuid language sql immutable as $$
+  select case when split_part(objname,'/',1) ~ '^[0-9a-f-]{36}$' then split_part(objname,'/',1)::uuid else null end $$;
+create policy "contracts read"   on storage.objects for select to authenticated using (bucket_id='contracts' and public.is_member(public.contract_event(name)));
+create policy "contracts insert" on storage.objects for insert to authenticated with check (bucket_id='contracts' and public.can_edit(public.contract_event(name)));
+create policy "contracts update" on storage.objects for update to authenticated using (bucket_id='contracts' and public.can_edit(public.contract_event(name)));
+create policy "contracts remove" on storage.objects for delete to authenticated using (bucket_id='contracts' and public.can_edit(public.contract_event(name)));
