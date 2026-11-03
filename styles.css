@@ -1,23 +1,23 @@
 /* Layout: sticky brand bar, side rail of modules (right, RTL) on desktop, scrolling chip row on phones; one working view at a time */
 :root{
-  --bg:#fff8f5; --surface:#ffffff; --sunk:#fdefea; --line:#f4dcd5;
-  --fg:#3a2030; --muted:#8a6a78; --accent:#e0457b; --accent-ink:#ffffff; --accent-soft:#fde3ec;
-  --sage:#16927f; --sage-soft:#d8f3ed; --warn:#b86e00; --warn-soft:#fff0d4; --bad:#d0312d; --bad-soft:#fde2e0;
-  --gold:#f2a93b; --hdr-a:#ffe0ea; --hdr-b:#fff0d9; --hdr-c:#dcf5ee;
+  --bg:#fdf8f4; --surface:#ffffff; --sunk:#f8eee8; --line:#eedfd5;
+  --fg:#3b2a25; --muted:#8a7369; --accent:#b0704f; --accent-ink:#ffffff; --accent-soft:#f6e6dc;
+  --sage:#5f7a48; --sage-soft:#e6eedc; --warn:#a8670a; --warn-soft:#fbefd9; --bad:#c2412f; --bad-soft:#fbe3df;
+  --gold:#c9a063; --hdr-a:#fbeee8; --hdr-b:#fcf5ec; --hdr-c:#eef2e4;
   --display:"Secular One","Rubik",Arial,sans-serif;
   --body:"Assistant","Segoe UI",Arial,sans-serif;
   --r:14px;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#1d1418; --surface:#2a1c22; --sunk:#34242b; --line:#47323b;
-  --fg:#fbeef2; --muted:#c4a4b2; --accent:#ff7aa5; --accent-ink:#2a0b17; --accent-soft:#4d2233;
-  --sage:#5fd3bf; --sage-soft:#173a34; --warn:#f2b35a; --warn-soft:#3d2c12; --bad:#ff8a80; --bad-soft:#45201d;
-  --gold:#f7c060; --hdr-a:#3d1a29; --hdr-b:#3a2a17; --hdr-c:#15332d; color-scheme:dark}}
+  --bg:#1c1613; --surface:#28201c; --sunk:#322823; --line:#463830;
+  --fg:#f8efe9; --muted:#c7b0a3; --accent:#e5a98a; --accent-ink:#2a140b; --accent-soft:#4a3024;
+  --sage:#a9c58f; --sage-soft:#2a3522; --warn:#f2b35a; --warn-soft:#3d2c12; --bad:#ff8a80; --bad-soft:#45201d;
+  --gold:#e3c088; --hdr-a:#3a2620; --hdr-b:#382d1d; --hdr-c:#26301d; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#1d1418; --surface:#2a1c22; --sunk:#34242b; --line:#47323b;
-  --fg:#fbeef2; --muted:#c4a4b2; --accent:#ff7aa5; --accent-ink:#2a0b17; --accent-soft:#4d2233;
-  --sage:#5fd3bf; --sage-soft:#173a34; --warn:#f2b35a; --warn-soft:#3d2c12; --bad:#ff8a80; --bad-soft:#45201d;
-  --gold:#f7c060; --hdr-a:#3d1a29; --hdr-b:#3a2a17; --hdr-c:#15332d; color-scheme:dark}
+  --bg:#1c1613; --surface:#28201c; --sunk:#322823; --line:#463830;
+  --fg:#f8efe9; --muted:#c7b0a3; --accent:#e5a98a; --accent-ink:#2a140b; --accent-soft:#4a3024;
+  --sage:#a9c58f; --sage-soft:#2a3522; --warn:#f2b35a; --warn-soft:#3d2c12; --bad:#ff8a80; --bad-soft:#45201d;
+  --gold:#e3c088; --hdr-a:#3a2620; --hdr-b:#382d1d; --hdr-c:#26301d; color-scheme:dark}
 *{box-sizing:border-box}
 html,body{background:var(--bg);color:var(--fg)}
 body{font-family:var(--body);font-size:15px;line-height:1.5;direction:rtl}
@@ -30,7 +30,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .kicker{font-size:13px;font-weight:700;color:var(--fg);letter-spacing:.3px}
 .tagline{font-size:14px;color:var(--muted);align-self:flex-end;padding-bottom:3px}
 .top-in{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1280px;margin:0 auto}
-.brand{font-family:var(--display);font-size:32px;color:var(--accent);letter-spacing:.5px}
+.brand{font-family:"Montserrat",var(--display);font-weight:600;font-size:30px;letter-spacing:3px;direction:ltr;background:linear-gradient(90deg,#a8783f,#d8b072 45%,#c08066);-webkit-background-clip:text;background-clip:text;color:transparent}
 .couple{font-family:var(--display);font-size:17px}
 .count{margin-inline-start:auto;display:flex;align-items:baseline;gap:6px;color:var(--muted)}
 .count b{font-family:var(--display);font-size:24px;color:var(--fg);font-variant-numeric:tabular-nums}
@@ -162,3 +162,6 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
 .who i{font-style:normal;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:var(--sage);color:#fff;font-size:11px}
 .who.me i{background:var(--accent)}
 .who.me{cursor:pointer}.who u{font-weight:400;font-size:11px;color:var(--accent);margin-inline-start:2px}
+.logo{width:52px;height:52px;border-radius:50%;object-fit:cover;box-shadow:0 1px 4px rgba(120,80,50,.18);flex:none}
+.hero-logo{display:block;width:min(220px,60vw);height:auto;border-radius:50%;margin:8px 0 14px;box-shadow:0 6px 24px rgba(150,100,70,.18)}
+.welcome .kicker{display:block;margin-bottom:4px}
