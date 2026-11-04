@@ -97,7 +97,7 @@ window.addEventListener("beforeunload",ev=>{flushNow();if(cloud()&&Object.values
 window.addEventListener("online",()=>{if(cloud()&&eventId)obReplay()});
 setInterval(()=>{if(cloud()&&eventId&&navigator.onLine&&!Object.values(timers).some(Boolean)&&!Object.values(writing).some(Boolean))obReplay()},30000);
 /* ---------- עדכון גירסה: שומרים הכול ורק אז מרעננים ---------- */
-const APP_VERSION="2026.11.04-7";
+const APP_VERSION="2026.11.04-8";
 let updating=false;
 const busy=()=>Object.values(writing).some(Boolean)||Object.values(timers).some(Boolean);
 async function checkVersion(){if(updating)return;try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const j=await r.json();
@@ -577,14 +577,14 @@ function vRsvp(){
   const e=E();
   return `<h1>אישורי הגעה</h1><p class="lead">בוחרים למי לשלוח, והאפליקציה מעבירה אתכם מוזמן אחרי מוזמן בוואטסאפ שלכם. כל הודעה כוללת קישור אישי, והתשובה של המוזמן (מגיע, כמה, איזו מנה) נכנסת לכאן לבד.</p>
   <div class="stack">
-  <div class="kpis">${kpi("מגיעים",nf.format(s.yes))}${kpi("לא ענו",nf.format(s.pend))}${kpi("אולי",nf.format(s.maybe))}${kpi("לא מגיעים",nf.format(s.no))}${kpi("תחזית",nf.format(s.exp),`לפי ${num(e.pendingRate||75)}% הגעה ממי שלא ענה`)}</div>
+  <div class="kpis">${kpi("מגיעים",nf.format(s.yes))}${kpi("לא מגיעים",nf.format(s.no))}${kpi("אולי",nf.format(s.maybe))}${kpi("לא ענו",nf.format(s.pend))}${kpi("תחזית",nf.format(s.exp),`לפי ${num(e.pendingRate||75)}% הגעה ממי שלא ענה`)}</div>
   <details class="panel"><summary>נוסח ההזמנה</summary><div class="stack" style="margin-top:10px">
     <p class="small muted">אפשר להשתמש ב: {שם} {שם מלא} {חתן} {כלה} {תאריך} {שעה} {אולם} {כתובת} {קישור}. אם אין {קישור} בנוסח, הקישור האישי יתווסף בסוף.</p>
     <textarea id="invite-text" data-bind="event.inviteText" rows="8">${esc(e.inviteText||DEFAULT_INVITE)}</textarea></div></details>
   <section class="panel sendbar"><div class="row"><b>שליחה בוואטסאפ</b><span class="muted small">נבחרו ${rSel.size}</span></div>
     <div class="row"><button class="btn sm" data-act="rs-pick" data-v="unsent">כל מי שלא קיבל</button><button class="btn sm" data-act="rs-pick" data-v="pending">כל מי שלא ענה</button><button class="btn sm" data-act="rs-pick" data-v="all">כל הרשימה</button><button class="btn sm" data-act="rs-pick" data-v="view">מה שמוצג</button>${rSel.size?`<button class="btn sm ghost" data-act="rs-pick" data-v="none">ניקוי</button>`:""}</div>
     <div class="row"><button class="btn pri" data-act="q-start" data-v="invite" ${rSel.size?"":"disabled"}>📲 שליחת הזמנה ל-${rSel.size}</button><button class="btn" data-act="q-start" data-v="remind" ${rSel.size?"":"disabled"}>תזכורת ל-${rSel.size}</button></div></section>
-  <div class="row"><span class="muted small">הצג:</span>${[["pending","לא ענו"],["maybe","אולי"],["yes","מגיעים"],["no","לא מגיעים"],["all","כולם"]].map(([k,l])=>`<button class="btn sm ${rFilter===k?"pri":""}" data-act="rfilter" data-v="${k}">${l}</button>`).join("")}</div>
+  <div class="row"><span class="muted small">הצג:</span>${[["yes","מגיעים"],["no","לא מגיעים"],["maybe","אולי"],["pending","לא ענו"],["all","כולם"]].map(([k,l])=>`<button class="btn sm ${rFilter===k?"pri":""}" data-act="rfilter" data-v="${k}">${l}</button>`).join("")}</div>
   <div class="panel flush tbl-wrap"><table class="one rt"><thead><tr><th><input type="checkbox" data-act="rs-all" aria-label="בחירת כל המוצגים" ${list.length&&list.every(g=>rSel.has(g.id))?"checked":""}></th><th>שם משפחה</th><th>שם פרטי</th><th>טלפון</th><th class="num">הוזמנו</th><th>נשלח</th><th>שליחה</th><th>תשובה</th><th class="num">מגיעים</th><th>מנה</th></tr></thead><tbody>
   ${list.map(g=>`<tr><td><input type="checkbox" data-act="rs-sel" data-id="${g.id}" ${rSel.has(g.id)?"checked":""} ${g.phone?"":"disabled"} aria-label="בחירה"></td>
     <td>${cIn(g,"lastName",{cls:"b",label:"שם משפחה",size:9})}</td><td>${cIn(g,"firstName",{cls:"b",label:"שם פרטי",size:9})}${g.rsvpAt?` <span class="pill p-yes" title="ענו בעצמם דרך הקישור">✓ קישור</span>`:""}</td>
