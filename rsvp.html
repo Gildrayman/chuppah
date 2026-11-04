@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>אישור הגעה · i DO</title>
+<meta name="description" content="אישור הגעה לחתונה">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#fdf8f4">
+<link rel="icon" type="image/png" href="ido2-icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Secular+One&family=Assistant:wght@400;600;700&display=swap">
+<style>
+:root{--bg:#fdf8f4;--surface:#fff;--ink:#3b2a22;--muted:#8a766b;--accent:#b0704f;--accent-ink:#fff;--sage:#5f7a48;--gold:#c9a063;--line:#eadfd6;--bad:#b54a3c}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1d1714;--surface:#2a211c;--ink:#f3e9e2;--muted:#b9a79b;--accent:#d8916c;--accent-ink:#1d1714;--sage:#9cba82;--gold:#d9b47a;--line:#3d312a;--bad:#e07a6b}}
+:root[data-theme="dark"]{--bg:#1d1714;--surface:#2a211c;--ink:#f3e9e2;--muted:#b9a79b;--accent:#d8916c;--accent-ink:#1d1714;--sage:#9cba82;--gold:#d9b47a;--line:#3d312a;--bad:#e07a6b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.55 Assistant,system-ui,sans-serif;min-height:100vh;display:flex;justify-content:center;padding:24px 16px 48px}
+main{width:min(460px,100%);display:flex;flex-direction:column;gap:18px;text-align:center}
+.logo{width:150px;height:auto;margin:0 auto;border-radius:24px}
+h1{font-family:"Secular One",Assistant,sans-serif;font-weight:400;font-size:30px;margin:0;line-height:1.2}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.det{display:flex;flex-direction:column;gap:4px}
+.muted{color:var(--muted)}.small{font-size:14px}
+.choices{display:grid;gap:10px}
+button,.btn{font:inherit;border-radius:14px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);padding:14px 16px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;justify-content:center;align-items:center;gap:8px;min-height:52px}
+button[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--surface))}
+.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button:disabled{opacity:.5;cursor:default}
+.step{display:flex;align-items:center;justify-content:center;gap:16px}
+.step button{width:52px;padding:0;font-size:24px}
+.step output{font-size:34px;font-weight:700;min-width:48px}
+select{font:inherit;padding:12px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);width:100%}
+.links{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.links .btn{min-height:44px;padding:10px 14px;font-weight:600}
+.err{color:var(--bad)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+  <img class="logo" src="ido2-logo.jpg" alt="i DO · כל הדרך לחופה" width="300" height="300">
+  <section id="loading" class="card"><p class="muted">טוען את ההזמנה…</p></section>
+  <section id="bad" class="card" hidden><h1>הקישור לא נמצא</h1><p class="muted">יכול להיות שהוא נקטע בהעתקה. כדאי לפתוח שוב את הקישור מההודעה בוואטסאפ, או לענות לזוג ישירות.</p></section>
+
+  <div id="app" hidden>
+    <h1 id="hello"></h1>
+    <section class="card det" id="det"></section>
+
+    <section class="card" id="form">
+      <b>תגיעו?</b>
+      <div class="choices">
+        <button type="button" data-st="yes">🎉 מגיעים</button>
+        <button type="button" data-st="no">לא נוכל להגיע</button>
+        <button type="button" data-st="maybe">עוד לא יודעים</button>
+      </div>
+      <div id="yesbox" hidden class="card" style="padding:14px;border-style:dashed">
+        <span>כמה תהיו?</span>
+        <div class="step"><button type="button" id="minus" aria-label="פחות">−</button><output id="n">1</output><button type="button" id="plus" aria-label="יותר">+</button></div>
+        <span class="small muted" id="nhint"></span>
+        <label class="small muted" style="text-align:right">מנה מועדפת
+          <select id="meal"><option>רגיל</option><option>צמחוני</option><option>טבעוני</option><option>ללא גלוטן</option><option>ילדים</option></select></label>
+      </div>
+      <button type="button" class="pri" id="send" disabled>שליחת תשובה</button>
+      <p class="err small" id="err" hidden></p>
+    </section>
+
+    <section class="card" id="done" hidden>
+      <h1 id="thanks"></h1>
+      <p id="summary" class="muted"></p>
+      <div class="links" id="links"></div>
+      <button type="button" id="change">שינוי התשובה</button>
+    </section>
+  </div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const k=new URLSearchParams(location.search).get("k")||"";
+  const cfg=window.CHUPPAH_CONFIG||{};
+  const show=id=>["loading","bad","app"].forEach(x=>$("#"+x).hidden=x!==id);
+  if(!k||!window.supabase||!cfg.supabaseUrl){show("bad");return}
+  const sb=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{persistSession:false,autoRefreshToken:false}});
+  let d=null,st=null,n=1,max=1;
+  const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const fdate=s=>{if(!s)return"";const t=new Date(s+"T12:00:00");return t.toLocaleDateString("he-IL",{weekday:"long",day:"numeric",month:"long",year:"numeric"})};
+  function pick(v){st=v;document.querySelectorAll("[data-st]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.st===v));$("#yesbox").hidden=v!=="yes";$("#send").disabled=false}
+  function setN(v){n=Math.max(1,Math.min(max,v));$("#n").textContent=n;$("#minus").disabled=n<=1;$("#plus").disabled=n>=max}
+  function links(){const L=[];
+    if(d.address||d.venue)L.push(`<a class="btn" target="_blank" rel="noopener" href="https://waze.com/ul?navigate=yes&q=${encodeURIComponent([d.venue,d.address].filter(Boolean).join(" "))}">🚗 ניווט בוויז</a>`);
+    if(d.date){const t=(d.time||"19:30").replace(":","");const dd=d.date.replaceAll("-","");
+      const title=`החתונה של ${d.groom||""} ו${d.bride||""}`;
+      L.push(`<a class="btn" target="_blank" rel="noopener" href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${dd}T${t}00/${dd}T235900&ctz=Asia/Jerusalem&location=${encodeURIComponent([d.venue,d.address].filter(Boolean).join(", "))}">📅 הוספה ליומן</a>`)}
+    $("#links").innerHTML=L.join("")}
+  function showDone(){
+    $("#form").hidden=true;$("#done").hidden=false;
+    $("#thanks").textContent=d.status==="yes"?"איזה כיף, נתראה! 🎉":d.status==="no"?"תודה שעדכנתם 💛":"תודה, נשמח לעדכון כשתדעו";
+    $("#summary").textContent=d.status==="yes"?`רשמנו ${d.coming} ${d.coming==1?"אורח":"אורחים"}${d.meal&&d.meal!=="רגיל"?", מנה "+d.meal:""}.`:d.status==="no"?"חבל שלא תוכלו להגיע. אפשר לשנות את התשובה בכל זמן מהקישור הזה.":"אפשר לחזור לקישור הזה ולעדכן בכל זמן.";
+    $("#links").hidden=d.status==="no";links();
+  }
+  async function load(){
+    const {data,error}=await sb.rpc("rsvp_get",{k});
+    if(error||!data){show("bad");return}
+    d=data;max=Math.max(1,Number(d.invited)||1);
+    $("#hello").textContent=`היי ${d.first||""}!`;
+    $("#det").innerHTML=`<span>${esc(d.groom)} ו${esc(d.bride)} מתחתנים ושמחים להזמין אתכם</span>${d.date?`<b>📅 ${esc(fdate(d.date))}${d.time?" · "+esc(d.time):""}</b>`:""}${d.venue||d.address?`<span>📍 ${esc([d.venue,d.address].filter(Boolean).join(", "))}</span>`:""}`;
+    $("#nhint").textContent=max>1?`ההזמנה ל-${max} אורחים`:"";
+    setN(d.coming||max);$("#meal").value=d.meal||"רגיל";
+    show("app");
+    if(d.answered&&d.status!=="pending")showDone();
+  }
+  document.querySelectorAll("[data-st]").forEach(b=>b.onclick=()=>pick(b.dataset.st));
+  $("#minus").onclick=()=>setN(n-1);$("#plus").onclick=()=>setN(n+1);
+  $("#change").onclick=()=>{$("#done").hidden=true;$("#form").hidden=false;pick(d.status==="pending"?null:d.status);if(d.status==="pending")$("#send").disabled=true};
+  $("#send").onclick=async()=>{
+    if(!st)return;const b=$("#send");b.disabled=true;b.textContent="שולח…";$("#err").hidden=true;
+    const {data,error}=await sb.rpc("rsvp_submit",{k,st,n:st==="yes"?n:null,ml:st==="yes"?$("#meal").value:null});
+    b.textContent="שליחת תשובה";b.disabled=false;
+    if(error||!data){$("#err").textContent="השליחה לא הצליחה. בדקו שיש אינטרנט ונסו שוב.";$("#err").hidden=false;return}
+    d.status=st;d.coming=st==="yes"?n:st==="no"?0:null;if(st==="yes")d.meal=$("#meal").value;showDone();
+  };
+  load().catch(()=>show("bad"));
+})();
+</script>
+</body>
+</html>

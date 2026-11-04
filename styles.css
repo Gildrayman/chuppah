@@ -178,3 +178,11 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
 .linkbtn{all:unset;cursor:pointer;color:var(--bad);padding:0 4px}
 details.more{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px}
 details.more summary{color:var(--muted)}
+/* שליחה בוואטסאפ */
+.sendbar{display:flex;flex-direction:column;gap:10px}
+.sendq .qhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.sendq .qhead h2{margin:0}
+.sendq .qwho{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:18px}
+.sendq .qtxt{white-space:pre-wrap;font:inherit;font-size:14px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px;margin:0;max-height:34vh;overflow:auto}
+.sendq .btn.big{font-size:18px;padding:14px;justify-content:center;text-align:center}
+a.btn{text-decoration:none;display:inline-flex;align-items:center;justify-content:center}a.btn:not(.pri){color:inherit}a.btn.pri{color:#fff}

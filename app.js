@@ -54,8 +54,8 @@ const nz=v=>v===""||v==null?null:v;
 /* row mappers: app shape <-> database rows */
 const T={
   guests:{
-    rows:()=>S.guests.items.map(g=>{const gf=g.gift||{};return{id:g.id,name:fullName(g),first_name:g.firstName||"",last_name:g.lastName||"",phone:g.phone||"",side:g.side||"shared",grp:g.group||"",invited:num(g.invited),status:g.status||"pending",coming:g.coming==null||g.coming===""?null:num(g.coming),priority:g.priority||"A",meal:g.meal||"רגיל",table_id:g.table||null,arrived:!!g.arrived,sent_at:nz(g.sentAt),reminders:num(g.reminders),notes:g.notes||"",gift_type:gf.type||"",gift_amount:num(gf.amount),gift_note:gf.note||"",gift_thanked:!!gf.thanked}}),
-    apply:rs=>{S.guests.items=rs.map(r=>({id:r.id,name:r.name,firstName:r.first_name||"",lastName:r.last_name||"",phone:r.phone,side:r.side,group:r.grp,invited:r.invited,status:r.status,coming:r.coming,priority:r.priority,meal:r.meal,table:r.table_id,arrived:r.arrived,sentAt:r.sent_at||"",reminders:r.reminders,notes:r.notes,gift:{type:r.gift_type,amount:num(r.gift_amount)||"",note:r.gift_note,thanked:r.gift_thanked}}))}},
+    rows:()=>S.guests.items.map(g=>{const gf=g.gift||{};return{id:g.id,name:fullName(g),first_name:g.firstName||"",last_name:g.lastName||"",phone:g.phone||"",side:g.side||"shared",grp:g.group||"",invited:num(g.invited),status:g.status||"pending",coming:g.coming==null||g.coming===""?null:num(g.coming),priority:g.priority||"A",meal:g.meal||"רגיל",table_id:g.table||null,arrived:!!g.arrived,sent_at:nz(g.sentAt),reminders:num(g.reminders),notes:g.notes||"",gift_type:gf.type||"",gift_amount:num(gf.amount),gift_note:gf.note||"",gift_thanked:!!gf.thanked,rsvp_token:g.token||""}}),
+    apply:rs=>{S.guests.items=rs.map(r=>({id:r.id,name:r.name,firstName:r.first_name||"",lastName:r.last_name||"",phone:r.phone,side:r.side,group:r.grp,invited:r.invited,status:r.status,coming:r.coming,priority:r.priority,meal:r.meal,table:r.table_id,arrived:r.arrived,sentAt:r.sent_at||"",reminders:r.reminders,notes:r.notes,gift:{type:r.gift_type,amount:num(r.gift_amount)||"",note:r.gift_note,thanked:r.gift_thanked},token:r.rsvp_token||"",rsvpAt:r.rsvp_at||""}))}},
   seating_tables:{
     rows:()=>S.tables.items.map(t=>({id:t.id,name:String(t.name||""),seats:num(t.seats)})),
     apply:rs=>{S.tables.items=rs.map(r=>({id:r.id,name:r.name,seats:r.seats}))}},
@@ -97,7 +97,7 @@ window.addEventListener("beforeunload",ev=>{flushNow();if(cloud()&&Object.values
 window.addEventListener("online",()=>{if(cloud()&&eventId)obReplay()});
 setInterval(()=>{if(cloud()&&eventId&&navigator.onLine&&!Object.values(timers).some(Boolean)&&!Object.values(writing).some(Boolean))obReplay()},30000);
 /* ---------- עדכון גירסה: שומרים הכול ורק אז מרעננים ---------- */
-const APP_VERSION="2026.11.04-3";
+const APP_VERSION="2026.11.04-4";
 let updating=false;
 const busy=()=>Object.values(writing).some(Boolean)||Object.values(timers).some(Boolean);
 async function checkVersion(){if(updating)return;try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const j=await r.json();
@@ -528,31 +528,64 @@ function vGuests(){
   <p class="muted small">מוצגים ${list.length} מתוך ${G().length} הזמנות.</p></div>`;
 }
 
-function inviteText(g){const e=E();
-  const t=e.inviteText||DEFAULT_INVITE;
-  return t.replaceAll("{שם}",g.name).replaceAll("{חתן}",e.groom||"").replaceAll("{כלה}",e.bride||"").replaceAll("{תאריך}",fdate(e.date)).replaceAll("{אולם}",e.venue||"").replaceAll("{כתובת}",e.address||"").replaceAll("{שעה}",e.time||"");
-}
-const DEFAULT_INVITE="היי {שם}! 💍\n{חתן} ו{כלה} מתחתנים ושמחים להזמין אתכם לחגוג איתם.\n📅 {תאריך} בשעה {שעה}\n📍 {אולם}, {כתובת}\n\nנשמח לאישור הגעה בתשובה להודעה:\n1 = מגיעים (וכמה)\n2 = לא נוכל להגיע\n3 = עוד לא יודעים";
-const REMIND="היי {שם}, מזכירים בחיבה את החתונה של {חתן} ו{כלה} ב-{תאריך}. נשמח לדעת אם תגיעו כדי שנוכל לסגור מקומות 🙏";
+function newToken(){const a=new Uint8Array(12);crypto.getRandomValues(a);return [...a].map(x=>x.toString(16).padStart(2,"0")).join("")}
+function ensureToken(g){if(!g.token){g.token=newToken();return true}return false}
+function rsvpUrl(g){ensureToken(g);const u=new URL("rsvp.html",location.href);u.search="?k="+g.token;u.hash="";return u.toString()}
+function fillTpl(t,g){const e=E();
+  return t.replaceAll("{שם}",g.firstName||fullName(g)).replaceAll("{שם מלא}",fullName(g)).replaceAll("{חתן}",e.groom||"").replaceAll("{כלה}",e.bride||"").replaceAll("{תאריך}",fdate(e.date)).replaceAll("{אולם}",e.venue||"").replaceAll("{כתובת}",e.address||"").replaceAll("{שעה}",e.time||"").replaceAll("{קישור}",rsvpUrl(g))}
+function withLink(t){return t.includes("{קישור}")?t:t.replace(/\n*נשמח לאישור הגעה בתשובה להודעה:[\s\S]*$/,"")+"\n\nלאישור הגעה בלחיצה: {קישור}"}
+function inviteText(g){return fillTpl(withLink(E().inviteText||DEFAULT_INVITE),g)}
+function remindText(g){return fillTpl(withLink(E().remindText||REMIND),g)}
+const DEFAULT_INVITE="היי {שם}! 💍\n{חתן} ו{כלה} מתחתנים ושמחים להזמין אתכם לחגוג איתם.\n📅 {תאריך} בשעה {שעה}\n📍 {אולם}, {כתובת}\n\nלאישור הגעה בלחיצה: {קישור}";
+const REMIND="היי {שם}, מזכירים בחיבה את החתונה של {חתן} ו{כלה} ב-{תאריך}. נשמח לדעת אם תגיעו כדי שנוכל לסגור מקומות 🙏\nאישור בלחיצה: {קישור}";
 let rFilter="pending";
+const rSel=new Set();
+let sendQ=null;
 function waLink(g,txt){return `https://wa.me/${normPhone(g.phone)}?text=${encodeURIComponent(txt)}`}
+function smsLink(g,txt){const p=normPhone(g.phone);return `sms:${p?"+"+p:""}?&body=${encodeURIComponent(txt)}`}
+function startQueue(kind,ids){
+  const list=ids.map(findG).filter(g=>g&&g.phone);
+  if(!list.length){toast("אין מוזמנים עם טלפון ברשימה שבחרתם");return}
+  let ch=false;list.forEach(g=>{if(ensureToken(g))ch=true});if(ch){save("guests");flushNow()}
+  sendQ={kind,ids:list.map(g=>g.id),i:0,done:0};renderQueue();
+}
+function renderQueue(){
+  const q=sendQ;if(!q)return;const root=$("#modal-root");
+  const total=q.ids.length;
+  if(q.i>=total){root.innerHTML=`<div class="modal-bg"><div class="modal sendq" role="dialog" aria-modal="true"><h2>סיימתם! 🎉</h2><p>נפתחו ${q.done} הודעות מתוך ${total}. התשובות יגיעו לכאן לבד, ברגע שכל מוזמן ילחץ על הקישור שלו.</p><div class="foot"><button class="btn pri" type="button" data-act="q-stop">סגירה</button></div></div></div>`;return}
+  const g=findG(q.ids[q.i]);if(!g){q.i++;return renderQueue()}
+  const txt=q.kind==="remind"?remindText(g):inviteText(g);
+  root.innerHTML=`<div class="modal-bg"><div class="modal sendq" role="dialog" aria-modal="true" aria-label="שליחה בוואטסאפ">
+    <div class="qhead"><h2>${q.kind==="remind"?"שליחת תזכורות":"שליחת הזמנות"}</h2><span class="muted small">${q.i+1} מתוך ${total}</span></div>
+    ${bar((q.i)/total*100,"ok")}
+    <div class="qwho"><b>${esc(fullName(g))}</b><span dir="ltr" class="muted small">${esc(g.phone)}</span>${g.sentAt?`<span class="pill p-maybe">כבר נשלח ${fdate(g.sentAt)}</span>`:""}</div>
+    <pre class="qtxt">${esc(txt)}</pre>
+    <a class="btn pri big" href="${esc(waLink(g,txt))}" target="_blank" rel="noopener" data-act="q-send">📲 שליחה ל${esc(g.firstName||fullName(g))} בוואטסאפ</a>
+    <a class="btn" href="${esc(smsLink(g,txt))}" data-act="q-send">💬 אין לו וואטסאפ? שליחה ב-SMS</a>
+    <p class="small muted" style="margin:0">ההודעה תיפתח מוכנה (בוואטסאפ או בהודעות SMS). לוחצים שם על שליחה, חוזרים לכאן, והמוזמן הבא כבר מחכה.</p>
+    <div class="foot"><button class="btn" type="button" data-act="q-skip">דילוג</button><button class="btn ghost" type="button" data-act="q-stop">עצירה</button></div>
+  </div></div>`;
+}
 function vRsvp(){
   const s=stats();
   const list=G().filter(g=>rFilter==="all"||g.status===rFilter);
   const e=E();
-  return `<h1>אישורי הגעה</h1><p class="lead">שולחים לכל מוזמן הודעת וואטסאפ אישית בלחיצה, ומסמנים את התשובה כאן. תזכורות יוצאות רק למי שלא ענה.</p>
+  return `<h1>אישורי הגעה</h1><p class="lead">בוחרים למי לשלוח, והאפליקציה מעבירה אתכם מוזמן אחרי מוזמן בוואטסאפ שלכם. כל הודעה כוללת קישור אישי, והתשובה של המוזמן (מגיע, כמה, איזו מנה) נכנסת לכאן לבד.</p>
   <div class="stack">
   <div class="kpis">${kpi("מגיעים",nf.format(s.yes))}${kpi("לא ענו",nf.format(s.pend))}${kpi("אולי",nf.format(s.maybe))}${kpi("לא מגיעים",nf.format(s.no))}${kpi("תחזית",nf.format(s.exp),`לפי ${num(e.pendingRate||75)}% הגעה ממי שלא ענה`)}</div>
   <details class="panel"><summary>נוסח ההזמנה</summary><div class="stack" style="margin-top:10px">
-    <p class="small muted">אפשר להשתמש ב: {שם} {חתן} {כלה} {תאריך} {שעה} {אולם} {כתובת}</p>
+    <p class="small muted">אפשר להשתמש ב: {שם} {שם מלא} {חתן} {כלה} {תאריך} {שעה} {אולם} {כתובת} {קישור}. אם אין {קישור} בנוסח, הקישור האישי יתווסף בסוף.</p>
     <textarea id="invite-text" data-bind="event.inviteText" rows="8">${esc(e.inviteText||DEFAULT_INVITE)}</textarea></div></details>
+  <section class="panel sendbar"><div class="row"><b>שליחה בוואטסאפ</b><span class="muted small">נבחרו ${rSel.size}</span></div>
+    <div class="row"><button class="btn sm" data-act="rs-pick" data-v="unsent">כל מי שלא קיבל</button><button class="btn sm" data-act="rs-pick" data-v="pending">כל מי שלא ענה</button><button class="btn sm" data-act="rs-pick" data-v="all">כל הרשימה</button><button class="btn sm" data-act="rs-pick" data-v="view">מה שמוצג</button>${rSel.size?`<button class="btn sm ghost" data-act="rs-pick" data-v="none">ניקוי</button>`:""}</div>
+    <div class="row"><button class="btn pri" data-act="q-start" data-v="invite" ${rSel.size?"":"disabled"}>📲 שליחת הזמנה ל-${rSel.size}</button><button class="btn" data-act="q-start" data-v="remind" ${rSel.size?"":"disabled"}>תזכורת ל-${rSel.size}</button></div></section>
   <div class="row"><span class="muted small">הצג:</span>${[["pending","לא ענו"],["maybe","אולי"],["yes","מגיעים"],["no","לא מגיעים"],["all","כולם"]].map(([k,l])=>`<button class="btn sm ${rFilter===k?"pri":""}" data-act="rfilter" data-v="${k}">${l}</button>`).join("")}</div>
-  <div class="panel flush tbl-wrap"><table><thead><tr><th>שם</th><th class="num">הוזמנו</th><th>נשלח</th><th>שליחה</th><th>תשובה</th><th class="num">כמה מגיעים</th></tr></thead><tbody>
-  ${list.map(g=>`<tr><td><b>${esc(g.name)}</b><div class="small muted">${SIDES[g.side]||""}${g.group?" · "+esc(g.group):""}</div></td><td class="num">${num(g.invited)}</td>
+  <div class="panel flush tbl-wrap"><table><thead><tr><th><input type="checkbox" data-act="rs-all" aria-label="בחירת כל המוצגים" ${list.length&&list.every(g=>rSel.has(g.id))?"checked":""}></th><th>שם</th><th class="num">הוזמנו</th><th>נשלח</th><th>שליחה</th><th>תשובה</th><th class="num">כמה מגיעים</th></tr></thead><tbody>
+  ${list.map(g=>`<tr><td><input type="checkbox" data-act="rs-sel" data-id="${g.id}" ${rSel.has(g.id)?"checked":""} ${g.phone?"":"disabled"}></td><td><b>${esc(fullName(g))}</b><div class="small muted">${SIDES[g.side]||""}${g.group?" · "+esc(g.group):""}${g.rsvpAt?` · <span class="pill p-yes">ענו בקישור</span>`:""}</div></td><td class="num">${num(g.invited)}</td>
     <td class="small">${g.sentAt?`${fdate(g.sentAt)}${g.reminders?` · ${g.reminders} תזכורות`:""}`:`<span class="muted">טרם</span>`}</td>
-    <td>${g.phone?`<div class="row"><a class="btn sm" href="${esc(waLink(g,inviteText(g)))}" target="_blank" rel="noopener" data-act="sent" data-id="${g.id}">הזמנה</a>${g.status==="pending"&&g.sentAt?`<a class="btn sm" href="${esc(waLink(g,REMIND.replaceAll("{שם}",g.name).replaceAll("{חתן}",e.groom||"").replaceAll("{כלה}",e.bride||"").replaceAll("{תאריך}",fdate(e.date))))}" target="_blank" rel="noopener" data-act="remind" data-id="${g.id}">תזכורת</a>`:""}</div>`:`<span class="small muted">אין טלפון</span>`}</td>
+    <td>${g.phone?`<div class="row"><a class="btn sm" href="${esc(waLink(g,inviteText(g)))}" target="_blank" rel="noopener" data-act="sent" data-id="${g.id}">הזמנה</a><a class="btn sm ghost" href="${esc(smsLink(g,inviteText(g)))}" data-act="sent" data-id="${g.id}" title="למי שאין וואטסאפ">SMS</a>${g.status==="pending"&&g.sentAt?`<a class="btn sm" href="${esc(waLink(g,remindText(g)))}" target="_blank" rel="noopener" data-act="remind" data-id="${g.id}">תזכורת</a>`:""}</div>`:`<span class="small muted">אין טלפון</span>`}</td>
     <td><div class="row">${["yes","maybe","no"].map(k=>`<button class="btn sm ${g.status===k?"pri":""}" data-act="rsvp" data-id="${g.id}" data-v="${k}">${STATUS[k]}</button>`).join("")}</div></td>
-    <td class="num">${g.status==="yes"?`<input class="inl" style="width:64px" type="number" min="0" id="c-${g.id}" data-guest="${g.id}" data-gf="coming" value="${num(g.coming||g.invited)}">`:"—"}</td></tr>`).join("")||`<tr><td colspan="6" class="muted">אין מוזמנים בקטגוריה הזו.</td></tr>`}
+    <td class="num">${g.status==="yes"?`<input class="inl" style="width:64px" type="number" min="0" id="c-${g.id}" data-guest="${g.id}" data-gf="coming" value="${num(g.coming||g.invited)}">`:"—"}</td></tr>`).join("")||`<tr><td colspan="7" class="muted">אין מוזמנים בקטגוריה הזו.</td></tr>`}
   </tbody></table></div>
   ${rFilter==="pending"&&list.length?`<p class="small muted">טיפ: שבוע לפני החתונה, התקשרו בעצמכם לכל מי שנשאר ברשימה הזו. כל מקום ריק עולה ${money(E().pricePerPlate)}.</p>`:""}
   <section class="panel"><h2>דו"ח מנות לאולם</h2>${mealReport()}</section>
@@ -904,8 +937,13 @@ document.addEventListener("click",ev=>{
   case "guest-import":modal("ייבוא מוזמנים",`<p class="small muted">העתיקו עמודות מאקסל והדביקו כאן. סדר העמודות: שם משפחה, שם פרטי, טלפון, מספר מוזמנים. אפשר להוסיף אחריהם צד (חתן / כלה / משותף) וקבוצה.</p><textarea name="csv" id="m-csv" rows="10" placeholder="כהן	דני ורותי	050-1234567	2	כלה	משפחה"></textarea>`,fd=>{const r=importGuests(fd.get("csv"));toast(`נוספו ${r.added}, דולגו ${r.dup} כפילויות`)});break;
   case "guest-copy":{const rows=[["שם משפחה","שם פרטי","טלפון","מספר מוזמנים","צד","קבוצה","סטטוס","מגיעים","מנה","שולחן"],...G().map(g=>[g.lastName||"",g.firstName||g.name,g.phone,g.invited,SIDES[g.side],g.group,STATUS[g.status],g.coming??"",g.meal,(S.tables.items.find(t=>t.id===g.table)||{}).name||""])].map(r=>r.join("\t")).join("\n");copy(rows,"הרשימה הועתקה. הדביקו באקסל");break}
   case "rfilter":rFilter=el.dataset.v;render();break;
-  case "sent":{const g=findG(id);if(!g.sentAt)g.sentAt=iso(today());save("guests");setTimeout(render,100);break}
-  case "remind":{const g=findG(id);g.reminders=(g.reminders||0)+1;save("guests");setTimeout(render,100);break}
+  case "sent":{const g=findG(id);ensureToken(g);if(!g.sentAt)g.sentAt=iso(today());save("guests");flushNow();setTimeout(render,100);break}
+  case "rs-pick":{const v=el.dataset.v;if(v==="none")rSel.clear();else{rSel.clear();const vis=G().filter(g=>rFilter==="all"||g.status===rFilter);(v==="view"?vis:G().filter(g=>v==="all"||(v==="unsent"?!g.sentAt:g.status==="pending"))).filter(g=>g.phone).forEach(g=>rSel.add(g.id))}render();break}
+  case "q-start":startQueue(el.dataset.v,[...rSel]);break;
+  case "q-send":{const q=sendQ;if(!q)break;const g=findG(q.ids[q.i]);if(g){ensureToken(g);if(q.kind==="remind")g.reminders=(g.reminders||0)+1;if(!g.sentAt)g.sentAt=iso(today());save("guests")}q.done++;q.i++;setTimeout(renderQueue,400);break}
+  case "q-skip":if(sendQ){sendQ.i++;renderQueue()}break;
+  case "q-stop":{const n=sendQ?sendQ.done:0;sendQ=null;rSel.clear();closeModal();if(n)toast(`נשלחו ${n} הודעות`);break}
+  case "remind":{const g=findG(id);ensureToken(g);g.reminders=(g.reminders||0)+1;save("guests");flushNow();setTimeout(render,100);break}
   case "rsvp":{const g=findG(id);g.status=el.dataset.v;if(g.status==="yes"&&g.coming==null)g.coming=g.invited;if(g.status==="no")g.table=null;save("guests");render();break}
   case "table-add":modal("שולחן חדש",`<div class="form"><label class="field">שם / מספר<input type="text" name="name" id="t-name" required value="${S.tables.items.length+1}"></label><label class="field">מקומות<input type="number" name="seats" id="t-seats" value="12"></label></div>`,fd=>{S.tables.items.push({id:uid(),name:fd.get("name"),seats:num(fd.get("seats"))});save("tables")});break;
   case "tables-bulk":modal("הוספת כמה שולחנות",`<div class="form"><label class="field">כמה שולחנות<input type="number" name="n" id="tb-n" value="10"></label><label class="field">מקומות בכל שולחן<input type="number" name="seats" id="tb-s" value="12"></label></div>`,fd=>{let n=num(fd.get("n")),st=S.tables.items.length;for(let i=1;i<=n;i++)S.tables.items.push({id:uid(),name:String(st+i),seats:num(fd.get("seats"))});save("tables")});break;
@@ -936,6 +974,8 @@ document.addEventListener("change",ev=>{
   const el=ev.target;const a=el.dataset.act,id=el.dataset.id;
   if(a==="task-toggle"){const t=S.tasks.items.find(t=>t.id===id);t.done=el.checked;save("tasks");render();return}
   if(a==="sel"){el.checked?selGuests.add(id):selGuests.delete(id);render();return}
+  if(a==="rs-sel"){el.checked?rSel.add(id):rSel.delete(id);render();return}
+  if(a==="rs-all"){const vis=G().filter(g=>(rFilter==="all"||g.status===rFilter)&&g.phone);vis.forEach(g=>el.checked?rSel.add(g.id):rSel.delete(g.id));render();return}
   if(a==="v-signed"){const v=findV(id);v.contract=v.contract||{checks:{}};v.contract.signed=el.checked;save("vendors");render();return}
   if(a==="v-check"){const v=findV(id);v.contract=v.contract||{checks:{}};v.contract.checks=v.contract.checks||{};v.contract.checks[CONTRACT[num(el.dataset.i)]]=el.checked;save("vendors");return}
   if(a==="pay-toggle"){const p=findV(id).payments.find(p=>p.id===el.dataset.p);p.paid=el.checked;save("vendors");render();return}
