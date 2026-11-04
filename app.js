@@ -97,7 +97,7 @@ window.addEventListener("beforeunload",ev=>{flushNow();if(cloud()&&Object.values
 window.addEventListener("online",()=>{if(cloud()&&eventId)obReplay()});
 setInterval(()=>{if(cloud()&&eventId&&navigator.onLine&&!Object.values(timers).some(Boolean)&&!Object.values(writing).some(Boolean))obReplay()},30000);
 /* ---------- עדכון גירסה: שומרים הכול ורק אז מרעננים ---------- */
-const APP_VERSION="2026.11.04-8";
+const APP_VERSION="2026.11.04-9";
 let updating=false;
 const busy=()=>Object.values(writing).some(Boolean)||Object.values(timers).some(Boolean);
 async function checkVersion(){if(updating)return;try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const j=await r.json();
@@ -250,7 +250,7 @@ async function bioEnable(){
 function bioDisable(){const o=bioGet();delete o[myEmail()];bioSet(o);toast("זיהוי הפנים כובה");render()}
 async function bioUnlock(){const c=bioFor(myEmail());if(!c)return;const msg=$("#u-msg");if(msg)msg.textContent="";
   try{await navigator.credentials.get({publicKey:{challenge:rnd(32),allowCredentials:[{type:"public-key",id:unb64u(c.id)}],userVerification:"required",timeout:60000}});
-    locked=false;if(!eventId&&!memberships.length)await afterLogin();else{render();trackMe();showOnline()}
+    locked=false;goHome();window.scrollTo(0,0);if(!eventId&&!memberships.length)await afterLogin();else{render();trackMe();showOnline()}
   }catch(e){console.warn(e);if(msg)msg.textContent="הזיהוי לא הצליח. נסו שוב, או היכנסו עם סיסמה."}}
 const FACE_SVG=`<svg viewBox="0 0 48 48" width="64" height="64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15V10a4 4 0 0 1 4-4h5M33 6h5a4 4 0 0 1 4 4v5M42 33v5a4 4 0 0 1-4 4h-5M15 42h-5a4 4 0 0 1-4-4v-5"/><path d="M17 18v3M31 18v3M24 19v7h-2M18 31c3.5 3 8.5 3 12 0"/></svg>`;
 function unlockView(){return `<div class="welcome">
@@ -278,9 +278,9 @@ async function relock(){if(!session)return;flushNow();if(bioOk&&bioFor(myEmail()
 document.addEventListener("visibilitychange",()=>{if(document.hidden){window.__hid=Date.now()}else if(window.__hid&&Date.now()-window.__hid>5*60*1000)relock()});
 window.addEventListener("pageshow",ev=>{if(ev.persisted&&session)relock()});
 
+function goHome(){view="home";try{localStorage.setItem("chuppah-view","home")}catch(e){};if(location.hash&&location.hash!=="#home")history.replaceState(null,"",location.pathname+location.search+"#home")}
 async function boot(){
-  try{const t=localStorage.getItem("chuppah-view");if(t&&VIEWS.some(v=>v[0]===t))view=t}catch(e){}
-  const h=location.hash.slice(1);if(VIEWS.some(v=>v[0]===h))view=h;
+  goHome();
   if(CFG.supabaseUrl&&CFG.supabaseAnonKey&&window.supabase){
     sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseAnonKey);
     await bioCheck();
@@ -312,7 +312,7 @@ function loginView(){return `<div class="welcome">
 document.addEventListener("submit",async ev=>{if(ev.target.id!=="login")return;ev.preventDefault();
   const pw=String(new FormData(ev.target).get("pw"));const msg=$("#l-msg");msg.textContent="בודק…";
   for(const email of [CFG.coupleEmail,CFG.parentsEmail].filter(Boolean)){
-    const {error}=await sb.auth.signInWithPassword({email,password:pw});
+    const {error}=await sb.auth.signInWithPassword({email,password:pw});if(!error){goHome();window.scrollTo(0,0)}
     if(!error){msg.textContent="";return}
   }
   msg.textContent="הסיסמה לא נכונה. נסו שוב.";});
