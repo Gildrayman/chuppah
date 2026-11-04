@@ -186,3 +186,12 @@ details.more summary{color:var(--muted)}
 .sendq .qtxt{white-space:pre-wrap;font:inherit;font-size:14px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px;margin:0;max-height:34vh;overflow:auto}
 .sendq .btn.big{font-size:18px;padding:14px;justify-content:center;text-align:center}
 a.btn{text-decoration:none;display:inline-flex;align-items:center;justify-content:center}a.btn:not(.pri){color:inherit}a.btn.pri{color:#fff}
+/* טבלאות: שורה אחת לכל מוזמן, עריכה בלחיצה על התא */
+table.one td,table.one th{white-space:nowrap;padding:5px 6px}
+table.one .row.nw{flex-wrap:nowrap;gap:4px}
+input.cell,select.cell{border:1px solid transparent;background:transparent;border-radius:6px;padding:4px 6px;font:inherit;color:inherit;width:auto;max-width:100%}
+input.cell.b{font-weight:700}
+input.cell[type=number]{width:4.2em;text-align:center}
+input.cell:hover,select.cell:hover{border-color:var(--line);background:var(--surface)}
+input.cell:focus,select.cell:focus{border-color:var(--accent);background:var(--surface);outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+select.cell{appearance:none;-webkit-appearance:none;cursor:pointer;padding-inline-end:6px}
