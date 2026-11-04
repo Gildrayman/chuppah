@@ -21,7 +21,7 @@ begin
   if length(k) < 16 or st not in ('yes','no','maybe') then return false; end if;
   update public.guests set
     status = st,
-    coming = case when st = 'yes' then greatest(1, least(coalesce(n, invited), 30)) when st = 'no' then 0 else null end,
+    coming = case when st = 'yes' then greatest(1, least(coalesce(n, invited), 6)) when st = 'no' then 0 else null end,
     meal = case when ml in ('רגיל','צמחוני','טבעוני','ללא גלוטן','ילדים') then ml else meal end,
     table_id = case when st = 'no' then null else table_id end,
     rsvp_at = now(), updated_at = now()

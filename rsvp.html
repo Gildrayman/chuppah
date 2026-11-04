@@ -104,7 +104,7 @@ select{font:inherit;padding:12px;border-radius:12px;border:1.5px solid var(--lin
   async function load(){
     const {data,error}=await sb.rpc("rsvp_get",{k});
     if(error||!data){show("bad");return}
-    d=data;max=20;
+    d=data;max=6;
     $("#hello").textContent=`היי ${d.first||""}!`;
     $("#det").innerHTML=`<span>${esc(d.groom)} ו${esc(d.bride)} מתחתנים ושמחים להזמין אתכם</span>${d.date?`<b>📅 ${esc(fdate(d.date))}${d.time?" · "+esc(d.time):""}</b>`:""}${d.venue||d.address?`<span>📍 ${esc([d.venue,d.address].filter(Boolean).join(", "))}</span>`:""}`;
     
