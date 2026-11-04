@@ -88,7 +88,7 @@ select{font:inherit;padding:12px;border-radius:12px;border:1.5px solid var(--lin
   const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   const fdate=s=>{if(!s)return"";const t=new Date(s+"T12:00:00");return t.toLocaleDateString("he-IL",{weekday:"long",day:"numeric",month:"long",year:"numeric"})};
   function pick(v){st=v;document.querySelectorAll("[data-st]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.st===v));$("#yesbox").hidden=v!=="yes";$("#send").disabled=false}
-  function setN(v){n=Math.max(1,Math.min(max,v));$("#n").textContent=n;$("#minus").disabled=n<=1;$("#plus").disabled=n>=max}
+  function setN(v){n=Math.max(1,Math.min(max,v));$("#n").textContent=n;$("#minus").disabled=n<=1;$("#plus").disabled=n>=max;const inv=Number(d&&d.invited)||0;$("#nhint").textContent=inv?(n>inv?`ההזמנה הייתה ל-${inv}. נעדכן את הזוג שתהיו ${n}`:`ההזמנה ל-${inv} ${inv==1?"אורח":"אורחים"}`):""}
   function links(){const L=[];
     if(d.address||d.venue)L.push(`<a class="btn" target="_blank" rel="noopener" href="https://waze.com/ul?navigate=yes&q=${encodeURIComponent([d.venue,d.address].filter(Boolean).join(" "))}">🚗 ניווט בוויז</a>`);
     if(d.date){const t=(d.time||"19:30").replace(":","");const dd=d.date.replaceAll("-","");
@@ -104,11 +104,11 @@ select{font:inherit;padding:12px;border-radius:12px;border:1.5px solid var(--lin
   async function load(){
     const {data,error}=await sb.rpc("rsvp_get",{k});
     if(error||!data){show("bad");return}
-    d=data;max=Math.max(1,Number(d.invited)||1);
+    d=data;max=20;
     $("#hello").textContent=`היי ${d.first||""}!`;
     $("#det").innerHTML=`<span>${esc(d.groom)} ו${esc(d.bride)} מתחתנים ושמחים להזמין אתכם</span>${d.date?`<b>📅 ${esc(fdate(d.date))}${d.time?" · "+esc(d.time):""}</b>`:""}${d.venue||d.address?`<span>📍 ${esc([d.venue,d.address].filter(Boolean).join(", "))}</span>`:""}`;
-    $("#nhint").textContent=max>1?`ההזמנה ל-${max} אורחים`:"";
-    setN(d.coming||max);$("#meal").value=d.meal||"רגיל";
+    
+    setN(d.coming||Number(d.invited)||1);$("#meal").value=d.meal||"רגיל";
     show("app");
     if(d.answered&&d.status!=="pending")showDone();
   }

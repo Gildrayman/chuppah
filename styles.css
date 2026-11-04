@@ -257,3 +257,4 @@ html,body{overflow-x:hidden;max-width:100%}
 }
 @media (max-width:380px){table.pt input.inl,table.bt input.inl{width:3.8em}}
 @media (max-width:380px){table.pt th:nth-child(5),table.pt td:nth-child(5){display:none}}
+input.cell.warn{color:var(--bad);font-weight:700;background:var(--bad-soft)}

@@ -97,7 +97,7 @@ window.addEventListener("beforeunload",ev=>{flushNow();if(cloud()&&Object.values
 window.addEventListener("online",()=>{if(cloud()&&eventId)obReplay()});
 setInterval(()=>{if(cloud()&&eventId&&navigator.onLine&&!Object.values(timers).some(Boolean)&&!Object.values(writing).some(Boolean))obReplay()},30000);
 /* ---------- עדכון גירסה: שומרים הכול ורק אז מרעננים ---------- */
-const APP_VERSION="2026.11.04-6";
+const APP_VERSION="2026.11.04-7";
 let updating=false;
 const busy=()=>Object.values(writing).some(Boolean)||Object.values(timers).some(Boolean);
 async function checkVersion(){if(updating)return;try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const j=await r.json();
@@ -528,7 +528,7 @@ function vGuests(){
   <p class="small muted" style="margin:0">לוחצים על כל תא כדי לערוך אותו. השינוי נשמר לבד.</p>
   <div class="panel flush tbl-wrap"><table class="one gt"><thead><tr><th>שם משפחה</th><th>שם פרטי</th><th>טלפון</th><th class="num">מוזמנים</th><th>צד</th><th>קבוצה</th><th>עדיפות</th><th>סטטוס</th><th class="num">מגיעים</th><th>מנה</th><th></th></tr></thead><tbody>
   ${list.map(g=>{const dup=g.phone&&G().filter(x=>normPhone(x.phone)===normPhone(g.phone)).length>1;
-   return `<tr><td>${cIn(g,"lastName",{cls:"b",label:"שם משפחה",size:9})}</td><td>${cIn(g,"firstName",{cls:"b",label:"שם פרטי",size:9})}${dup?` <span class="pill p-no">כפילות?</span>`:""}</td><td>${cIn(g,"phone",{type:"tel",ltr:true,label:"טלפון",size:11})}</td><td class="num">${cIn(g,"invited",{type:"number",label:"מוזמנים",size:3})}</td><td>${cSel(g,"side",Object.entries(SIDES),"צד")}</td><td>${cIn(g,"group",{list:"grp-list",label:"קבוצה",size:8})}</td><td>${cSel(g,"priority",[["A","A"],["B","B"],["C","C"]],"עדיפות")}</td><td>${cSel(g,"status",stOpts(),"סטטוס")}</td><td class="num">${g.status==="yes"?cIn(g,"coming",{type:"number",label:"מגיעים",size:3}):"—"}</td><td>${cSel(g,"meal",MEALS.map(m=>[m,m]),"מנה")}</td><td><button class="btn sm ghost" data-act="guest-edit" data-id="${g.id}" title="כל הפרטים והערות">⋯</button></td></tr>`}).join("")||`<tr><td colspan="11" class="muted">אין מוזמנים שמתאימים לסינון.</td></tr>`}
+   return `<tr><td>${cIn(g,"lastName",{cls:"b",label:"שם משפחה",size:9})}</td><td>${cIn(g,"firstName",{cls:"b",label:"שם פרטי",size:9})}${dup?` <span class="pill p-no">כפילות?</span>`:""}</td><td>${cIn(g,"phone",{type:"tel",ltr:true,label:"טלפון",size:11})}</td><td class="num">${cIn(g,"invited",{type:"number",label:"מוזמנים",size:3})}</td><td>${cSel(g,"side",Object.entries(SIDES),"צד")}</td><td>${cIn(g,"group",{list:"grp-list",label:"קבוצה",size:8})}</td><td>${cSel(g,"priority",[["A","A"],["B","B"],["C","C"]],"עדיפות")}</td><td>${cSel(g,"status",stOpts(),"סטטוס")}</td><td class="num">${g.status==="yes"?cIn(g,"coming",{type:"number",label:"מגיעים",size:3,cls:num(g.coming)>num(g.invited)?"warn":""}):"—"}</td><td>${cSel(g,"meal",MEALS.map(m=>[m,m]),"מנה")}</td><td><button class="btn sm ghost" data-act="guest-edit" data-id="${g.id}" title="כל הפרטים והערות">⋯</button></td></tr>`}).join("")||`<tr><td colspan="11" class="muted">אין מוזמנים שמתאימים לסינון.</td></tr>`}
   </tbody></table></div>
   <p class="muted small">מוצגים ${list.length} מתוך ${G().length} הזמנות.</p></div>`;
 }
@@ -592,7 +592,7 @@ function vRsvp(){
     <td class="small">${g.sentAt?`${fdate(g.sentAt)}${g.reminders?` · ${g.reminders} תז׳`:""}`:`<span class="muted">טרם</span>`}</td>
     <td>${g.phone?`<div class="row nw"><a class="btn sm" href="${esc(waLink(g,inviteText(g)))}" target="_blank" rel="noopener" data-act="sent" data-id="${g.id}" aria-label="הזמנה בוואטסאפ"><span class="hm">הזמנה</span><span class="om">📲</span></a><a class="btn sm ghost hm" href="${esc(smsLink(g,inviteText(g)))}" data-act="sent" data-id="${g.id}" title="למי שאין וואטסאפ">SMS</a>${g.status==="pending"&&g.sentAt?`<a class="btn sm hm" href="${esc(waLink(g,remindText(g)))}" target="_blank" rel="noopener" data-act="remind" data-id="${g.id}">תזכורת</a>`:""}</div>`:`<span class="small muted">אין טלפון</span>`}</td>
     <td>${cSel(g,"status",stOpts(),"תשובה")}</td>
-    <td class="num">${g.status==="yes"?cIn(g,"coming",{type:"number",label:"מגיעים",size:3}):"—"}</td><td>${cSel(g,"meal",MEALS.map(m=>[m,m]),"מנה")}</td></tr>`).join("")||`<tr><td colspan="10" class="muted">אין מוזמנים בקטגוריה הזו.</td></tr>`}
+    <td class="num">${g.status==="yes"?cIn(g,"coming",{type:"number",label:"מגיעים",size:3,cls:num(g.coming)>num(g.invited)?"warn":""}):"—"}</td><td>${cSel(g,"meal",MEALS.map(m=>[m,m]),"מנה")}</td></tr>`).join("")||`<tr><td colspan="10" class="muted">אין מוזמנים בקטגוריה הזו.</td></tr>`}
   </tbody></table></div>
   ${rFilter==="pending"&&list.length?`<p class="small muted">טיפ: שבוע לפני החתונה, התקשרו בעצמכם לכל מי שנשאר ברשימה הזו. כל מקום ריק עולה ${money(E().pricePerPlate)}.</p>`:""}
   <section class="panel"><h2>דו"ח מנות לאולם</h2>${mealReport()}</section>
