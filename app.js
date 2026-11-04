@@ -97,7 +97,7 @@ window.addEventListener("beforeunload",ev=>{flushNow();if(cloud()&&Object.values
 window.addEventListener("online",()=>{if(cloud()&&eventId)obReplay()});
 setInterval(()=>{if(cloud()&&eventId&&navigator.onLine&&!Object.values(timers).some(Boolean)&&!Object.values(writing).some(Boolean))obReplay()},30000);
 /* ---------- עדכון גירסה: שומרים הכול ורק אז מרעננים ---------- */
-const APP_VERSION="2026.11.04-9";
+const APP_VERSION="2026.11.04-10";
 let updating=false;
 const busy=()=>Object.values(writing).some(Boolean)||Object.values(timers).some(Boolean);
 async function checkVersion(){if(updating)return;try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const j=await r.json();
@@ -160,6 +160,31 @@ async function refetch(k,remote){
     if(remote&&Date.now()-(myWrite[k]||0)>2500){const v=$("#view");if(v){v.classList.remove("flash");void v.offsetWidth;v.classList.add("flash")}}
   }catch(e){console.error(e)}
 }
+// גיבוי לזמן אמת: כשחוזרים לאפליקציה (למשל אחרי וואטסאפ) או כל 15 שניות, בודקים אם השתנה משהו
+let cuBusy=false,cuLast=0;
+async function catchUp(force){
+  if(!sb||!session||!eventId||locked||cuBusy||document.hidden)return;
+  if(!force&&Date.now()-cuLast<3000)return;
+  cuBusy=true;cuLast=Date.now();
+  try{
+    if(!channel||["closed","errored"].includes(channel.state))subscribe();
+    let changed=false;
+    for(const k of ["guests","tables","vendors","budget","tasks","schedule"]){
+      if(timers[k]||writing[k])continue;
+      const before=JSON.stringify([S.event,S.budget,S[k]]);
+      if(k==="budget"){const {data,error}=await sb.from("events").select("*").eq("id",eventId).single();if(!error&&data)applyEvent(data)}
+      for(const t of MODULE_TABLES[k]){const rs=await fetchTable(t);if(timers[k]||writing[k])break;T[t].apply(rs);remember(t)}
+      if(JSON.stringify([S.event,S.budget,S[k]])!==before)changed=true;
+    }
+    if(changed){safeRender();const v=$("#view");if(v){v.classList.remove("flash");void v.offsetWidth;v.classList.add("flash")}}
+  }catch(e){console.warn(e)}
+  cuBusy=false;
+}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)setTimeout(()=>catchUp(true),300)});
+window.addEventListener("focus",()=>catchUp());
+window.addEventListener("pageshow",()=>catchUp(true));
+window.addEventListener("online",()=>catchUp(true));
+setInterval(()=>catchUp(),15000);
 let channel=null;
 function subscribe(){
   if(channel)sb.removeChannel(channel);
