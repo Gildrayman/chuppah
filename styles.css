@@ -176,3 +176,5 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
 .cview img{width:100%;border-radius:8px;border:1px solid var(--line)}
 .cpdf{display:flex;flex-direction:column;gap:6px}.cpdf iframe{width:100%;height:60vh;border:1px solid var(--line);border-radius:8px;background:#fff}
 .linkbtn{all:unset;cursor:pointer;color:var(--bad);padding:0 4px}
+details.more{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px}
+details.more summary{color:var(--muted)}

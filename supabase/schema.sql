@@ -57,6 +57,8 @@ create table if not exists public.guests (
   id           text primary key,
   event_id     uuid not null references public.events(id) on delete cascade,
   name         text not null,
+  first_name   text not null default '',
+  last_name    text not null default '',
   phone        text not null default '',
   side         text not null default 'shared' check (side in ('groom','bride','shared')),
   grp          text not null default '',

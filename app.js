@@ -54,8 +54,8 @@ const nz=v=>v===""||v==null?null:v;
 /* row mappers: app shape <-> database rows */
 const T={
   guests:{
-    rows:()=>S.guests.items.map(g=>{const gf=g.gift||{};return{id:g.id,name:g.name||"",phone:g.phone||"",side:g.side||"shared",grp:g.group||"",invited:num(g.invited),status:g.status||"pending",coming:g.coming==null||g.coming===""?null:num(g.coming),priority:g.priority||"A",meal:g.meal||"רגיל",table_id:g.table||null,arrived:!!g.arrived,sent_at:nz(g.sentAt),reminders:num(g.reminders),notes:g.notes||"",gift_type:gf.type||"",gift_amount:num(gf.amount),gift_note:gf.note||"",gift_thanked:!!gf.thanked}}),
-    apply:rs=>{S.guests.items=rs.map(r=>({id:r.id,name:r.name,phone:r.phone,side:r.side,group:r.grp,invited:r.invited,status:r.status,coming:r.coming,priority:r.priority,meal:r.meal,table:r.table_id,arrived:r.arrived,sentAt:r.sent_at||"",reminders:r.reminders,notes:r.notes,gift:{type:r.gift_type,amount:num(r.gift_amount)||"",note:r.gift_note,thanked:r.gift_thanked}}))}},
+    rows:()=>S.guests.items.map(g=>{const gf=g.gift||{};return{id:g.id,name:fullName(g),first_name:g.firstName||"",last_name:g.lastName||"",phone:g.phone||"",side:g.side||"shared",grp:g.group||"",invited:num(g.invited),status:g.status||"pending",coming:g.coming==null||g.coming===""?null:num(g.coming),priority:g.priority||"A",meal:g.meal||"רגיל",table_id:g.table||null,arrived:!!g.arrived,sent_at:nz(g.sentAt),reminders:num(g.reminders),notes:g.notes||"",gift_type:gf.type||"",gift_amount:num(gf.amount),gift_note:gf.note||"",gift_thanked:!!gf.thanked}}),
+    apply:rs=>{S.guests.items=rs.map(r=>({id:r.id,name:r.name,firstName:r.first_name||"",lastName:r.last_name||"",phone:r.phone,side:r.side,group:r.grp,invited:r.invited,status:r.status,coming:r.coming,priority:r.priority,meal:r.meal,table:r.table_id,arrived:r.arrived,sentAt:r.sent_at||"",reminders:r.reminders,notes:r.notes,gift:{type:r.gift_type,amount:num(r.gift_amount)||"",note:r.gift_note,thanked:r.gift_thanked}}))}},
   seating_tables:{
     rows:()=>S.tables.items.map(t=>({id:t.id,name:String(t.name||""),seats:num(t.seats)})),
     apply:rs=>{S.tables.items=rs.map(r=>({id:r.id,name:r.name,seats:r.seats}))}},
@@ -97,7 +97,7 @@ window.addEventListener("beforeunload",ev=>{flushNow();if(cloud()&&Object.values
 window.addEventListener("online",()=>{if(cloud()&&eventId)obReplay()});
 setInterval(()=>{if(cloud()&&eventId&&navigator.onLine&&!Object.values(timers).some(Boolean)&&!Object.values(writing).some(Boolean))obReplay()},30000);
 /* ---------- עדכון גירסה: שומרים הכול ורק אז מרעננים ---------- */
-const APP_VERSION="2026.11.04-2";
+const APP_VERSION="2026.11.04-3";
 let updating=false;
 const busy=()=>Object.values(writing).some(Boolean)||Object.values(timers).some(Boolean);
 async function checkVersion(){if(updating)return;try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const j=await r.json();
@@ -508,7 +508,7 @@ let gFilter={q:"",side:"",status:""};
 function vGuests(){
   const s=stats();
   const by=k=>G().filter(g=>g.side===k).reduce((a,g)=>a+num(g.invited),0);
-  const list=G().filter(g=>(!gFilter.side||g.side===gFilter.side)&&(!gFilter.status||g.status===gFilter.status)&&(!gFilter.q||(g.name+" "+(g.group||"")+" "+(g.phone||"")).includes(gFilter.q)));
+  const list=G().filter(g=>(!gFilter.side||g.side===gFilter.side)&&(!gFilter.status||g.status===gFilter.status)&&(!gFilter.q||(fullName(g)+" "+(g.group||"")+" "+(g.phone||"")).includes(gFilter.q))).slice().sort((a,b)=>((a.lastName||a.name||"")+" "+(a.firstName||"")).localeCompare((b.lastName||b.name||"")+" "+(b.firstName||""),"he"));
   const quota=num(E().guestQuota);
   return `<h1>מוזמנים</h1><p class="lead">רשימה אחת לשני הצדדים. מספר טלפון שחוזר פעמיים מסומן ככפילות.</p>
   <div class="stack">
@@ -521,9 +521,9 @@ function vGuests(){
     <button class="btn" data-act="guest-import">ייבוא מאקסל</button>
     <button class="btn" data-act="guest-copy">העתקה לאקסל</button>
   </div>
-  <div class="panel flush tbl-wrap"><table><thead><tr><th>שם</th><th>טלפון</th><th>צד</th><th>קבוצה</th><th class="num">הוזמנו</th><th>עדיפות</th><th>סטטוס</th><th>מנה</th><th></th></tr></thead><tbody>
+  <div class="panel flush tbl-wrap"><table><thead><tr><th>שם משפחה</th><th>שם פרטי</th><th>טלפון</th><th class="num">מוזמנים</th><th>צד</th><th>קבוצה</th><th>עדיפות</th><th>סטטוס</th><th>מנה</th><th></th></tr></thead><tbody>
   ${list.map(g=>{const dup=g.phone&&G().filter(x=>normPhone(x.phone)===normPhone(g.phone)).length>1;
-   return `<tr><td><b>${esc(g.name)}</b>${dup?` <span class="pill p-no">כפילות?</span>`:""}</td><td dir="ltr" style="text-align:right">${esc(g.phone||"")}</td><td>${SIDES[g.side]||""}</td><td>${esc(g.group||"")}</td><td class="num">${num(g.invited)}</td><td>${esc(g.priority||"")}</td><td><span class="pill p-${g.status}">${STATUS[g.status]}${g.status==="yes"?" · "+num(g.coming||g.invited):""}</span></td><td>${esc(g.meal||"")}</td><td><button class="btn sm ghost" data-act="guest-edit" data-id="${g.id}">עריכה</button></td></tr>`}).join("")||`<tr><td colspan="9" class="muted">אין מוזמנים שמתאימים לסינון.</td></tr>`}
+   return `<tr><td><b>${esc(g.lastName||"")}</b></td><td><b>${esc(g.firstName||(g.lastName?"":g.name))}</b>${dup?` <span class="pill p-no">כפילות?</span>`:""}</td><td dir="ltr" style="text-align:right">${esc(g.phone||"")}</td><td class="num">${num(g.invited)}</td><td>${SIDES[g.side]||""}</td><td>${esc(g.group||"")}</td><td>${esc(g.priority||"")}</td><td><span class="pill p-${g.status}">${STATUS[g.status]}${g.status==="yes"?" · "+num(g.coming||g.invited):""}</span></td><td>${esc(g.meal||"")}</td><td><button class="btn sm ghost" data-act="guest-edit" data-id="${g.id}">עריכה</button></td></tr>`}).join("")||`<tr><td colspan="9" class="muted">אין מוזמנים שמתאימים לסינון.</td></tr>`}
   </tbody></table></div>
   <p class="muted small">מוצגים ${list.length} מתוך ${G().length} הזמנות.</p></div>`;
 }
@@ -720,20 +720,25 @@ function modal(title,body,onSave,extra){
 function closeModal(){$("#modal-root").innerHTML="";render()}
 function toast(t){const d=document.createElement("div");d.className="toast";d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),2200)}
 
-function guestForm(g){g=g||{side:"shared",invited:2,status:"pending",priority:"A",meal:"רגיל"};
+function fullName(g){const n=`${g.firstName||""} ${g.lastName||""}`.trim();return n||g.name||""}
+function guestForm(g){g=g||{side:"shared",invited:"",status:"pending",priority:"A",meal:"רגיל"};
   const groups=[...new Set(G().map(x=>x.group).filter(Boolean))];
+  const fn=g.firstName!=null&&g.firstName!==""||g.lastName?g.firstName||"":(g.name||"");
   return `<div class="form">
-  <label class="field wide">שם (כפי שיופיע בהזמנה)<input type="text" name="name" id="m-name" required value="${esc(g.name||"")}"></label>
-  <label class="field">טלפון<input type="tel" name="phone" id="m-phone" dir="ltr" value="${esc(g.phone||"")}"></label>
+  <label class="field">שם משפחה *<input type="text" name="lastName" id="m-last" required autocomplete="off" value="${esc(g.lastName||"")}"></label>
+  <label class="field">שם פרטי *<input type="text" name="firstName" id="m-first" required autocomplete="off" value="${esc(fn)}"></label>
+  <label class="field">מספר טלפון *<input type="tel" name="phone" id="m-phone" dir="ltr" required inputmode="tel" pattern="[0-9+\\-\\s]{9,15}" title="מספר טלפון, למשל 050-1234567" value="${esc(g.phone||"")}"></label>
+  <label class="field">מספר המוזמנים *<input type="number" min="1" name="invited" id="m-inv" required inputmode="numeric" value="${num(g.invited)||""}"></label>
+  </div>
+  <details class="more"${g.id?"":""}><summary>פרטים נוספים (לא חובה)</summary><div class="form" style="margin-top:10px">
   <label class="field">צד<select name="side" id="m-side">${Object.entries(SIDES).map(([k,v])=>`<option value="${k}" ${g.side===k?"selected":""}>${v}</option>`).join("")}</select></label>
   <label class="field">קבוצה<input type="text" name="group" id="m-group" list="groups" value="${esc(g.group||"")}"><datalist id="groups">${groups.map(x=>`<option value="${esc(x)}">`).join("")}</datalist></label>
-  <label class="field">כמה מוזמנים בהזמנה<input type="number" min="1" name="invited" id="m-inv" value="${num(g.invited)||1}"></label>
   <label class="field">עדיפות<select name="priority" id="m-pri">${["A","B","C"].map(k=>`<option ${g.priority===k?"selected":""}>${k}</option>`).join("")}</select></label>
   <label class="field">סטטוס<select name="status" id="m-st">${Object.entries(STATUS).map(([k,v])=>`<option value="${k}" ${g.status===k?"selected":""}>${v}</option>`).join("")}</select></label>
   <label class="field">כמה מגיעים בפועל<input type="number" min="0" name="coming" id="m-com" value="${g.coming??""}"></label>
   <label class="field">מנה<select name="meal" id="m-meal">${MEALS.map(k=>`<option ${g.meal===k?"selected":""}>${k}</option>`).join("")}</select></label>
-  <label class="field wide">הערות<input type="text" name="notes" id="m-notes" value="${esc(g.notes||"")}"></label></div>`}
-function readGuest(fd,g){["name","phone","side","group","priority","status","meal","notes"].forEach(k=>g[k]=(fd.get(k)||"").toString().trim());g.invited=num(fd.get("invited"))||1;g.coming=fd.get("coming")===""?null:num(fd.get("coming"));if(g.status==="no")g.table=null;return g}
+  <label class="field wide">הערות<input type="text" name="notes" id="m-notes" value="${esc(g.notes||"")}"></label></div></details>`}
+function readGuest(fd,g){g.firstName=(fd.get("firstName")||"").toString().trim();g.lastName=(fd.get("lastName")||"").toString().trim();g.name=fullName(g);["phone","side","group","priority","status","meal","notes"].forEach(k=>g[k]=(fd.get(k)||"").toString().trim());g.invited=num(fd.get("invited"))||1;g.coming=fd.get("coming")===""?null:num(fd.get("coming"));if(g.status==="no")g.table=null;return g}
 
 function vendorForm(v){const isNew=!v;v=v||{cat:CATS[0],status:"lead"};
  return `${contractBox(isNew?null:v)}${!isNew&&(v.contractFiles||[]).length?`<div class="small" style="margin:-4px 0 10px">${v.contractFiles.map((f,i)=>`<span class="pill" style="margin:2px">📄 ${esc(f.name)} <button type="button" class="linkbtn" data-act="cfile-del" data-id="${v.id}" data-i="${i}" aria-label="מחיקת קובץ">✕</button></span>`).join("")}</div>`:""}<div class="form"><label class="field wide">שם הספק<input type="text" name="name" id="v-name" required value="${esc(v.name||"")}"></label>
@@ -896,8 +901,8 @@ document.addEventListener("click",ev=>{
   case "guest-add":modal("מוזמן חדש",guestForm(),fd=>{const g=readGuest(fd,{id:uid(),table:null,arrived:false,gift:{}});const d=g.phone&&G().find(x=>normPhone(x.phone)===normPhone(g.phone));G().push(g);save("guests");if(d)toast(`שימו לב: אותו טלפון כמו ${d.name}`)});break;
   case "guest-edit":{const g=findG(id);modal("עריכת מוזמן",guestForm(g),fd=>{readGuest(fd,g);save("guests")},`<button class="btn danger" type="button" data-act="guest-del" data-id="${id}" style="margin-inline-start:auto">מחיקה</button>`);break}
   case "guest-del":S.guests.items=G().filter(g=>g.id!==id);save("guests");closeModal();break;
-  case "guest-import":modal("ייבוא מוזמנים",`<p class="small muted">העתיקו עמודות מאקסל והדביקו כאן. סדר העמודות: שם, טלפון, צד (חתן / כלה / משותף), קבוצה, כמות.</p><textarea name="csv" id="m-csv" rows="10" placeholder="משפחת כהן	050-1234567	כלה	משפחה	4"></textarea>`,fd=>{const r=importGuests(fd.get("csv"));toast(`נוספו ${r.added}, דולגו ${r.dup} כפילויות`)});break;
-  case "guest-copy":{const rows=[["שם","טלפון","צד","קבוצה","הוזמנו","סטטוס","מגיעים","מנה","שולחן"],...G().map(g=>[g.name,g.phone,SIDES[g.side],g.group,g.invited,STATUS[g.status],g.coming??"",g.meal,(S.tables.items.find(t=>t.id===g.table)||{}).name||""])].map(r=>r.join("\t")).join("\n");copy(rows,"הרשימה הועתקה. הדביקו באקסל");break}
+  case "guest-import":modal("ייבוא מוזמנים",`<p class="small muted">העתיקו עמודות מאקסל והדביקו כאן. סדר העמודות: שם משפחה, שם פרטי, טלפון, מספר מוזמנים. אפשר להוסיף אחריהם צד (חתן / כלה / משותף) וקבוצה.</p><textarea name="csv" id="m-csv" rows="10" placeholder="כהן	דני ורותי	050-1234567	2	כלה	משפחה"></textarea>`,fd=>{const r=importGuests(fd.get("csv"));toast(`נוספו ${r.added}, דולגו ${r.dup} כפילויות`)});break;
+  case "guest-copy":{const rows=[["שם משפחה","שם פרטי","טלפון","מספר מוזמנים","צד","קבוצה","סטטוס","מגיעים","מנה","שולחן"],...G().map(g=>[g.lastName||"",g.firstName||g.name,g.phone,g.invited,SIDES[g.side],g.group,STATUS[g.status],g.coming??"",g.meal,(S.tables.items.find(t=>t.id===g.table)||{}).name||""])].map(r=>r.join("\t")).join("\n");copy(rows,"הרשימה הועתקה. הדביקו באקסל");break}
   case "rfilter":rFilter=el.dataset.v;render();break;
   case "sent":{const g=findG(id);if(!g.sentAt)g.sentAt=iso(today());save("guests");setTimeout(render,100);break}
   case "remind":{const g=findG(id);g.reminders=(g.reminders||0)+1;save("guests");setTimeout(render,100);break}
@@ -975,9 +980,10 @@ function copy(text,msg){
 function fallbackCopy(text,msg){modal("העתיקו ידנית",`<p class="small muted">סמנו את הטקסט והעתיקו (Ctrl+C).</p><textarea id="m-copy" rows="10">${esc(text)}</textarea>`,null);const t=$("#m-copy");t.focus();t.select()}
 
 function importGuests(txt){let added=0,dup=0;const sideMap=s=>/חתן/.test(s)?"groom":/כלה/.test(s)?"bride":"shared";
-  String(txt||"").split(/\r?\n/).forEach(line=>{const c=line.split(/\t|,/).map(x=>x.trim());if(!c[0])return;
-    const ph=c[1]||"";if((ph&&G().some(g=>normPhone(g.phone)===normPhone(ph)))||G().some(g=>g.name===c[0])){dup++;return}
-    G().push({id:uid(),name:c[0],phone:ph,side:sideMap(c[2]||""),group:c[3]||"",invited:num(c[4])||1,status:"pending",priority:"A",meal:"רגיל",table:null,arrived:false,gift:{}});added++});
+  String(txt||"").split(/\r?\n/).forEach(line=>{const c=line.split(/\t|,/).map(x=>x.trim());if(!c[0]&&!c[1])return;
+    if(/משפחה|שם/.test(c[0])&&/פרטי|שם/.test(c[1]||""))return; // header row
+    const ln=c[0]||"",fn=c[1]||"",ph=c[2]||"",nm=`${fn} ${ln}`.trim();if((ph&&G().some(g=>normPhone(g.phone)===normPhone(ph)))||G().some(g=>fullName(g)===nm)){dup++;return}
+    G().push({id:uid(),firstName:fn,lastName:ln,name:nm,phone:ph,invited:num(c[3])||1,side:sideMap(c[4]||""),group:c[5]||"",status:"pending",priority:"A",meal:"רגיל",table:null,arrived:false,gift:{}});added++});
   save("guests");return{added,dup}}
 
 function autoSeat(){
