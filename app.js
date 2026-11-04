@@ -97,7 +97,7 @@ window.addEventListener("beforeunload",ev=>{flushNow();if(cloud()&&Object.values
 window.addEventListener("online",()=>{if(cloud()&&eventId)obReplay()});
 setInterval(()=>{if(cloud()&&eventId&&navigator.onLine&&!Object.values(timers).some(Boolean)&&!Object.values(writing).some(Boolean))obReplay()},30000);
 /* ---------- עדכון גירסה: שומרים הכול ורק אז מרעננים ---------- */
-const APP_VERSION="2026.11.04-5";
+const APP_VERSION="2026.11.04-6";
 let updating=false;
 const busy=()=>Object.values(writing).some(Boolean)||Object.values(timers).some(Boolean);
 async function checkVersion(){if(updating)return;try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const j=await r.json();
@@ -526,7 +526,7 @@ function vGuests(){
   </div>
   <datalist id="grp-list">${[...new Set(G().map(x=>x.group).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist>
   <p class="small muted" style="margin:0">לוחצים על כל תא כדי לערוך אותו. השינוי נשמר לבד.</p>
-  <div class="panel flush tbl-wrap"><table class="one"><thead><tr><th>שם משפחה</th><th>שם פרטי</th><th>טלפון</th><th class="num">מוזמנים</th><th>צד</th><th>קבוצה</th><th>עדיפות</th><th>סטטוס</th><th class="num">מגיעים</th><th>מנה</th><th></th></tr></thead><tbody>
+  <div class="panel flush tbl-wrap"><table class="one gt"><thead><tr><th>שם משפחה</th><th>שם פרטי</th><th>טלפון</th><th class="num">מוזמנים</th><th>צד</th><th>קבוצה</th><th>עדיפות</th><th>סטטוס</th><th class="num">מגיעים</th><th>מנה</th><th></th></tr></thead><tbody>
   ${list.map(g=>{const dup=g.phone&&G().filter(x=>normPhone(x.phone)===normPhone(g.phone)).length>1;
    return `<tr><td>${cIn(g,"lastName",{cls:"b",label:"שם משפחה",size:9})}</td><td>${cIn(g,"firstName",{cls:"b",label:"שם פרטי",size:9})}${dup?` <span class="pill p-no">כפילות?</span>`:""}</td><td>${cIn(g,"phone",{type:"tel",ltr:true,label:"טלפון",size:11})}</td><td class="num">${cIn(g,"invited",{type:"number",label:"מוזמנים",size:3})}</td><td>${cSel(g,"side",Object.entries(SIDES),"צד")}</td><td>${cIn(g,"group",{list:"grp-list",label:"קבוצה",size:8})}</td><td>${cSel(g,"priority",[["A","A"],["B","B"],["C","C"]],"עדיפות")}</td><td>${cSel(g,"status",stOpts(),"סטטוס")}</td><td class="num">${g.status==="yes"?cIn(g,"coming",{type:"number",label:"מגיעים",size:3}):"—"}</td><td>${cSel(g,"meal",MEALS.map(m=>[m,m]),"מנה")}</td><td><button class="btn sm ghost" data-act="guest-edit" data-id="${g.id}" title="כל הפרטים והערות">⋯</button></td></tr>`}).join("")||`<tr><td colspan="11" class="muted">אין מוזמנים שמתאימים לסינון.</td></tr>`}
   </tbody></table></div>
@@ -585,12 +585,12 @@ function vRsvp(){
     <div class="row"><button class="btn sm" data-act="rs-pick" data-v="unsent">כל מי שלא קיבל</button><button class="btn sm" data-act="rs-pick" data-v="pending">כל מי שלא ענה</button><button class="btn sm" data-act="rs-pick" data-v="all">כל הרשימה</button><button class="btn sm" data-act="rs-pick" data-v="view">מה שמוצג</button>${rSel.size?`<button class="btn sm ghost" data-act="rs-pick" data-v="none">ניקוי</button>`:""}</div>
     <div class="row"><button class="btn pri" data-act="q-start" data-v="invite" ${rSel.size?"":"disabled"}>📲 שליחת הזמנה ל-${rSel.size}</button><button class="btn" data-act="q-start" data-v="remind" ${rSel.size?"":"disabled"}>תזכורת ל-${rSel.size}</button></div></section>
   <div class="row"><span class="muted small">הצג:</span>${[["pending","לא ענו"],["maybe","אולי"],["yes","מגיעים"],["no","לא מגיעים"],["all","כולם"]].map(([k,l])=>`<button class="btn sm ${rFilter===k?"pri":""}" data-act="rfilter" data-v="${k}">${l}</button>`).join("")}</div>
-  <div class="panel flush tbl-wrap"><table class="one"><thead><tr><th><input type="checkbox" data-act="rs-all" aria-label="בחירת כל המוצגים" ${list.length&&list.every(g=>rSel.has(g.id))?"checked":""}></th><th>שם משפחה</th><th>שם פרטי</th><th>טלפון</th><th class="num">הוזמנו</th><th>נשלח</th><th>שליחה</th><th>תשובה</th><th class="num">מגיעים</th><th>מנה</th></tr></thead><tbody>
+  <div class="panel flush tbl-wrap"><table class="one rt"><thead><tr><th><input type="checkbox" data-act="rs-all" aria-label="בחירת כל המוצגים" ${list.length&&list.every(g=>rSel.has(g.id))?"checked":""}></th><th>שם משפחה</th><th>שם פרטי</th><th>טלפון</th><th class="num">הוזמנו</th><th>נשלח</th><th>שליחה</th><th>תשובה</th><th class="num">מגיעים</th><th>מנה</th></tr></thead><tbody>
   ${list.map(g=>`<tr><td><input type="checkbox" data-act="rs-sel" data-id="${g.id}" ${rSel.has(g.id)?"checked":""} ${g.phone?"":"disabled"} aria-label="בחירה"></td>
     <td>${cIn(g,"lastName",{cls:"b",label:"שם משפחה",size:9})}</td><td>${cIn(g,"firstName",{cls:"b",label:"שם פרטי",size:9})}${g.rsvpAt?` <span class="pill p-yes" title="ענו בעצמם דרך הקישור">✓ קישור</span>`:""}</td>
     <td>${cIn(g,"phone",{type:"tel",ltr:true,label:"טלפון",size:11})}</td><td class="num">${cIn(g,"invited",{type:"number",label:"הוזמנו",size:3})}</td>
     <td class="small">${g.sentAt?`${fdate(g.sentAt)}${g.reminders?` · ${g.reminders} תז׳`:""}`:`<span class="muted">טרם</span>`}</td>
-    <td>${g.phone?`<div class="row nw"><a class="btn sm" href="${esc(waLink(g,inviteText(g)))}" target="_blank" rel="noopener" data-act="sent" data-id="${g.id}">הזמנה</a><a class="btn sm ghost" href="${esc(smsLink(g,inviteText(g)))}" data-act="sent" data-id="${g.id}" title="למי שאין וואטסאפ">SMS</a>${g.status==="pending"&&g.sentAt?`<a class="btn sm" href="${esc(waLink(g,remindText(g)))}" target="_blank" rel="noopener" data-act="remind" data-id="${g.id}">תזכורת</a>`:""}</div>`:`<span class="small muted">אין טלפון</span>`}</td>
+    <td>${g.phone?`<div class="row nw"><a class="btn sm" href="${esc(waLink(g,inviteText(g)))}" target="_blank" rel="noopener" data-act="sent" data-id="${g.id}" aria-label="הזמנה בוואטסאפ"><span class="hm">הזמנה</span><span class="om">📲</span></a><a class="btn sm ghost hm" href="${esc(smsLink(g,inviteText(g)))}" data-act="sent" data-id="${g.id}" title="למי שאין וואטסאפ">SMS</a>${g.status==="pending"&&g.sentAt?`<a class="btn sm hm" href="${esc(waLink(g,remindText(g)))}" target="_blank" rel="noopener" data-act="remind" data-id="${g.id}">תזכורת</a>`:""}</div>`:`<span class="small muted">אין טלפון</span>`}</td>
     <td>${cSel(g,"status",stOpts(),"תשובה")}</td>
     <td class="num">${g.status==="yes"?cIn(g,"coming",{type:"number",label:"מגיעים",size:3}):"—"}</td><td>${cSel(g,"meal",MEALS.map(m=>[m,m]),"מנה")}</td></tr>`).join("")||`<tr><td colspan="10" class="muted">אין מוזמנים בקטגוריה הזו.</td></tr>`}
   </tbody></table></div>
@@ -633,7 +633,7 @@ function vGifts(){
   return `<h1>מתנות</h1><p class="lead">רושמים כל מתנה ישירות על המוזמן. כך נשמרת רשימה מסודרת של מי נתן כמה, ומאזן מול עלות האירוע.</p>
   <div class="stack"><div class="kpis">${kpi("התקבלו",money(total),`${withGift.length} מתנות`)}${kpi("צפי מתנות",money(expG),`${s.exp} מגיעים × ${money(E().avgGift)}`)}${kpi("עלות האירוע",money(cost))}${kpi("מאזן",`<span style="color:${(total||expG)-cost>=0?"var(--sage)":"var(--bad)"}">${money((total||expG)-cost)}</span>`,total?"לפי מתנות בפועל":"לפי צפי")}${kpi("תודות נשלחו",`${thanked}/${withGift.length}`)}</div>
   <div class="row"><label class="row small"><input type="checkbox" data-act="gift-came" ${giftOnlyCame?"checked":""}> רק מי שסומן "הגיע" ביום האירוע</label></div>
-  <div class="panel flush tbl-wrap"><table><thead><tr><th>שם</th><th>סוג</th><th class="num">סכום (₪)</th><th>הערה</th><th>תודה</th></tr></thead><tbody>
+  <div class="panel flush tbl-wrap"><table class="gf"><thead><tr><th>שם</th><th>סוג</th><th class="num">סכום (₪)</th><th>הערה</th><th>תודה</th></tr></thead><tbody>
   ${list.map(g=>{const gf=g.gift||{};return `<tr><td><b>${esc(g.name)}</b><div class="small muted">${esc(g.group||"")}</div></td>
   <td><select id="gt-${g.id}" data-guest="${g.id}" data-gf="gift.type"><option value=""></option>${GIFT_TYPES.map(t=>`<option ${gf.type===t?"selected":""}>${t}</option>`).join("")}</select></td>
   <td class="num"><input class="inl" type="number" min="0" id="ga-${g.id}" data-guest="${g.id}" data-gf="gift.amount" value="${gf.amount||""}"></td>
@@ -668,7 +668,7 @@ function vBudget(){
   const s=stats();const pi=plateInfo();
   return `<h1>תקציב</h1><p class="lead">התחזית מחברת את הספקים שנסגרו, הוצאות נוספות, ועלות המנות לפי מספר המגיעים הצפוי.</p>
   <div class="stack"><div class="kpis">${kpi("תקציב כולל",money(e.budget))}${kpi("מתוכנן בקטגוריות",money(plan))}${kpi("תחזית עלות",money(com),num(e.budget)?(com>num(e.budget)?`<span style="color:var(--bad)">חריגה ${money(com-num(e.budget))}</span>`:`נשארו ${money(num(e.budget)-com)}`):"")}${kpi("שולם",money(paid))}${kpi("עלות מנות",money(cateringCost()),`${pi.plates} מנות × ${money(pi.price)}`)}</div>
-  <div class="panel flush tbl-wrap"><table><thead><tr><th>קטגוריה</th><th class="num">מתוכנן</th><th class="num">תחזית</th><th class="num">שולם</th><th style="min-width:140px">ניצול</th></tr></thead><tbody>
+  <div class="panel flush tbl-wrap"><table class="bt"><thead><tr><th>קטגוריה</th><th class="num">מתוכנן</th><th class="num">תחזית</th><th class="num">שולם</th><th style="min-width:140px">ניצול</th></tr></thead><tbody>
   ${rows.map(r=>`<tr><td>${esc(r.cat)}${r.cat==="אולם וקייטרינג"?`<div class="small muted">כולל ${money(cateringCost())} מנות</div>`:""}</td><td class="num"><input class="inl" type="number" id="bp-${CATS.indexOf(r.cat)}" data-plan="${esc(r.cat)}" value="${r.plan||""}"></td><td class="num" style="${r.plan&&r.committed>r.plan?"color:var(--bad);font-weight:700":""}">${money(r.committed)}</td><td class="num">${money(r.paid)}</td><td>${bar(r.plan?r.committed/r.plan*100:0,r.plan&&r.committed>r.plan?"over":"")}</td></tr>`).join("")}
   <tr><td><b>סה"כ</b></td><td class="num"><b>${money(plan)}</b></td><td class="num"><b>${money(com)}</b></td><td class="num"><b>${money(paid)}</b></td><td></td></tr></tbody></table></div>
   <section class="panel"><h2>מי שילם כמה</h2><p class="small muted">לכל תשלום שסומן "שולם" בוחרים מי שילם. כאן רואים את ההשוואה מול מה שכל צד התחייב.</p>${payerTable()}</section>
@@ -692,7 +692,7 @@ function payerTable(){
   const ks=Object.keys(PAYERS);
   const cats=CATS.filter(c=>Object.values(by).some(r=>r.cats[c]));
   const un=by[""];
-  return `<div class="tbl-wrap"><table><thead><tr><th>מי</th><th class="num">התחייב</th><th class="num">שילם</th><th class="num">מתוכנן לשלם</th><th class="num">נותר מההתחייבות</th><th class="num">חלק מהתשלומים</th></tr></thead><tbody>
+  return `<div class="tbl-wrap"><table class="pt"><thead><tr><th>מי</th><th class="num">התחייב</th><th class="num">שילם</th><th class="num">מתוכנן לשלם</th><th class="num">נותר מההתחייבות</th><th class="num">חלק מהתשלומים</th></tr></thead><tbody>
   ${ks.map(k=>{const r=by[k];const p=num(pl[k]);return `<tr><td><b>${PAYERS[k]}</b></td><td class="num"><input class="inl" type="number" id="pl-${k}" data-pledge="${k}" value="${p||""}" style="width:100px"></td><td class="num"><b>${money(r.paid)}</b></td><td class="num">${money(r.planned)}</td><td class="num" style="${p&&r.paid>p?"color:var(--bad)":""}">${p?money(p-r.paid):"—"}</td><td class="num">${tot?Math.round(r.paid/tot*100):0}%</td></tr>`}).join("")}
   ${un.paid||un.planned?`<tr><td class="muted">לא שויך</td><td></td><td class="num">${money(un.paid)}</td><td class="num">${money(un.planned)}</td><td></td><td class="num">${tot?Math.round(un.paid/tot*100):0}%</td></tr>`:""}
   </tbody></table></div>

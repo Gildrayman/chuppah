@@ -195,3 +195,65 @@ input.cell[type=number]{width:4.2em;text-align:center}
 input.cell:hover,select.cell:hover{border-color:var(--line);background:var(--surface)}
 input.cell:focus,select.cell:focus{border-color:var(--accent);background:var(--surface);outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
 select.cell{appearance:none;-webkit-appearance:none;cursor:pointer;padding-inline-end:6px}
+/* מסך טלפון: בלי גלישה הצידה */
+.om{display:none}
+html,body{overflow-x:hidden;max-width:100%}
+@media (max-width:640px){
+  .hm{display:none!important}.om{display:inline}
+  table{font-size:13px}
+  th,td,table.one td,table.one th{padding:6px 4px}
+  th{white-space:normal}
+  table.one input.cell{max-width:100%}
+  table.one input.cell.b{width:100%;min-width:0}
+  table.one input.cell[type=number]{width:2.8em;padding:4px 2px}
+  select.cell{padding:4px 2px;max-width:5.6em}
+  /* מוזמנים: שם משפחה, שם פרטי, מוזמנים, סטטוס, ⋯ */
+  table.gt th:nth-child(3),table.gt td:nth-child(3),table.gt th:nth-child(5),table.gt td:nth-child(5),table.gt th:nth-child(6),table.gt td:nth-child(6),table.gt th:nth-child(7),table.gt td:nth-child(7),table.gt th:nth-child(9),table.gt td:nth-child(9),table.gt th:nth-child(10),table.gt td:nth-child(10){display:none}
+  /* אישורי הגעה: בחירה, שם משפחה, שם פרטי, שליחה, תשובה, מגיעים */
+  table.rt th:nth-child(4),table.rt td:nth-child(4),table.rt th:nth-child(5),table.rt td:nth-child(5),table.rt th:nth-child(6),table.rt td:nth-child(6),table.rt th:nth-child(10),table.rt td:nth-child(10){display:none}
+  table.rt .pill,table.gt .pill{display:none}
+  table.gf th:nth-child(4),table.gf td:nth-child(4){display:none}
+  table.gf input.inl{width:5em}
+  table.bt th:nth-child(3),table.bt td:nth-child(3){display:none}
+  table.bt th:last-child{min-width:0!important}
+  table.pt th:nth-child(4),table.pt td:nth-child(4),table.pt th:nth-child(6),table.pt td:nth-child(6){display:none}
+}
+@media (max-width:640px){
+  table.rt td:nth-child(2) input.cell,table.rt td:nth-child(3) input.cell,table.gt td:nth-child(1) input.cell,table.gt td:nth-child(2) input.cell{width:5.2em}
+  table.rt .btn.sm{padding:4px 7px}
+  table.bt .bar{min-width:36px}
+  table.bt td,table.bt th{white-space:normal}
+}
+@media (max-width:640px){
+  table input.inl{width:5.2em}
+  table.rt td:first-child,table.rt th:first-child{padding-inline:2px}
+  table.rt td:nth-child(2) input.cell,table.rt td:nth-child(3) input.cell{width:4.6em}
+  table.pt td,table.pt th{white-space:normal}
+}
+@media (max-width:640px){
+  table.one th{white-space:normal;line-height:1.2}
+  table.rt select.cell{max-width:5em}
+}
+@media (max-width:640px){
+  table.gt,table.rt{table-layout:fixed;width:100%}
+  table.gt td,table.rt td{overflow:hidden;text-overflow:ellipsis}
+  table.gt input.cell,table.rt input.cell,table.gt select.cell,table.rt select.cell{width:100%!important;max-width:100%}
+  table.gt th:nth-child(1),table.gt th:nth-child(2){width:26%}
+  table.gt th:nth-child(4){width:14%}
+  table.gt th:nth-child(8){width:24%}
+  table.gt th:nth-child(11){width:10%}
+  table.rt th:nth-child(1){width:8%}
+  table.rt th:nth-child(2),table.rt th:nth-child(3){width:21%}
+  table.rt th:nth-child(7){width:14%}
+  table.rt th:nth-child(8){width:22%}
+  table.rt th:nth-child(9){width:14%}
+  table.rt .btn.sm{padding:4px 2px;width:100%}
+  table.gt .btn.sm{padding:4px 0;width:100%}
+}
+@media (max-width:380px){
+  table{font-size:12px}
+  table input.inl{width:4.4em}
+  th,td{padding:5px 3px}
+}
+@media (max-width:380px){table.pt input.inl,table.bt input.inl{width:3.8em}}
+@media (max-width:380px){table.pt th:nth-child(5),table.pt td:nth-child(5){display:none}}
