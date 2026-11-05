@@ -35,6 +35,9 @@ select{font:inherit;padding:12px;border-radius:12px;border:1.5px solid var(--lin
 .links{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 .links .btn{min-height:44px;padding:10px 14px;font-weight:600}
 .err{color:var(--bad)}
+.inp{font:inherit;width:100%;padding:12px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink)}
+.gbtn{justify-content:space-between}
+.gbtn small{font-weight:400;color:var(--muted)}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -72,6 +75,24 @@ select{font:inherit;padding:12px;border-radius:12px;border:1.5px solid var(--lin
       <div class="links" id="links"></div>
       <button type="button" id="change">שינוי התשובה</button>
     </section>
+
+    <section class="card" id="gift" hidden>
+      <b style="font-size:20px">מתנה בהעברה</b>
+      <p class="muted" style="margin:0">למי שנוח לו, אפשר להעניק מתנה כאן. הכי חשוב לנו שתבואו ותשמחו איתנו 🤍</p>
+      <div id="g-people" class="choices"></div>
+      <p id="g-hint" class="small" hidden style="margin:0;background:color-mix(in srgb,var(--gold) 16%,var(--surface));border-radius:12px;padding:10px"></p>
+      <button type="button" id="g-open">✓ שלחתי מתנה</button>
+      <div id="g-form" class="card" style="padding:14px;border-style:dashed;text-align:right" hidden>
+        <b>נשמח לדעת, כדי שנוכל להודות 🙏</b>
+        <label class="small muted">סכום (₪)<input id="g-amt" type="number" inputmode="numeric" min="1" max="100000" class="inp"></label>
+        <label class="small muted">איך העברתם<select id="g-method"><option>ביט</option><option>פייבוקס</option><option>העברה בנקאית</option></select></label>
+        <label class="small muted">למי<select id="g-to"></select></label>
+        <label class="small muted">ברכה לזוג (לא חובה)<textarea id="g-note" rows="3" maxlength="500" class="inp"></textarea></label>
+        <button type="button" class="pri" id="g-send">עדכון הזוג</button>
+        <p class="err small" id="g-err" hidden></p>
+      </div>
+      <p id="g-thanks" hidden style="margin:0;font-weight:700">תודה רבה! 🤍 הזוג קיבל את העדכון ואת הברכה.</p>
+    </section>
   </div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
@@ -101,6 +122,31 @@ select{font:inherit;padding:12px;border-radius:12px;border:1.5px solid var(--lin
     $("#summary").textContent=d.status==="yes"?`רשמנו ${d.coming} ${d.coming==1?"אורח":"אורחים"}${d.meal&&d.meal!=="רגיל"?", מנה "+d.meal:""}.`:d.status==="no"?"חבל שלא תוכלו להגיע. אפשר לשנות את התשובה בכל זמן מהקישור הזה.":"אפשר לחזור לקישור הזה ולעדכן בכל זמן.";
     $("#links").hidden=d.status==="no";links();
   }
+  const giftMode=new URLSearchParams(location.search).get("gift")==="1";
+  function showGift(){
+    $("#form").hidden=true;$("#done").hidden=true;
+    $("#hello").textContent=`${d.first||""}, היום זה קורה! 🥂`;
+    $("#det").innerHTML=`<span>${esc(d.groom)} ו${esc(d.bride)} מחכים לחגוג איתכם</span>${d.time?`<b>🕖 ${esc(d.time)}</b>`:""}${d.venue||d.address?`<span>📍 ${esc([d.venue,d.address].filter(Boolean).join(", "))}</span>`:""}<div class="links" id="glinks"></div>`;
+    if(d.address||d.venue)$("#glinks").innerHTML=`<a class="btn" target="_blank" rel="noopener" href="https://waze.com/ul?navigate=yes&q=${encodeURIComponent([d.venue,d.address].filter(Boolean).join(" "))}">🚗 ניווט בוויז</a>`;
+    const people=(Array.isArray(d.people)?d.people:[]).filter(p=>p&&p.name&&p.phone);const pb=(d.paybox||"").trim();
+    const btns=[];
+    people.forEach((p,i)=>{if(p.app!=="paybox")btns.push(`<button type="button" class="gbtn" data-p="${i}" data-app="bit"><span>💙 ${esc(p.name)} בביט</span><small dir="ltr">${esc(p.phone)}</small></button>`);
+      if(p.app!=="bit")btns.push(`<button type="button" class="gbtn" data-p="${i}" data-app="paybox"><span>💜 ${esc(p.name)} בפייבוקס</span><small dir="ltr">${esc(p.phone)}</small></button>`)});
+    if(/^https?:\/\//.test(pb))btns.push(`<a class="btn gbtn" target="_blank" rel="noopener" href="${esc(pb)}" data-group="1"><span>💜 קבוצת הפייבוקס שלנו</span><small>פתיחה</small></a>`);
+    $("#g-people").innerHTML=btns.join("");
+    $("#g-to").innerHTML=[...people.map(p=>p.name),...(pb?["קבוצת הפייבוקס"]:[]),"אחר"].filter((v,i,a)=>a.indexOf(v)===i).map(n=>`<option>${esc(n)}</option>`).join("");
+    $("#gift").hidden=!btns.length;
+    $("#g-people").onclick=async ev=>{const b=ev.target.closest("[data-p],[data-group]");if(!b)return;
+      if(b.dataset.group){$("#g-method").value="פייבוקס";$("#g-to").value="קבוצת הפייבוקס";showForm();return}
+      ev.preventDefault();const p=people[+b.dataset.p];const app=b.dataset.app;const nm=app==="bit"?"ביט":"פייבוקס";
+      const link=(app==="bit"?p.bitLink:p.payboxLink)||"";const digits=String(p.phone).replace(/[^0-9]/g,"");
+      let copied=false;try{await navigator.clipboard.writeText(digits);copied=true}catch(e){}
+      $("#g-method").value=nm;$("#g-to").value=p.name;
+      if(/^https?:\/\//.test(link)){window.open(link,"_blank","noopener");$("#g-hint").textContent=`פתחנו את ${nm} להעברה ל${p.name}. אחרי ההעברה, חזרו לכאן ועדכנו אותנו בסכום 🙏`}
+      else $("#g-hint").textContent=`${copied?"המספר של "+p.name+" הועתק":"המספר של "+p.name+": "+p.phone}. פתחו את ${nm}, בחרו העברה, הדביקו את המספר, ואחרי ההעברה חזרו לכאן ועדכנו אותנו 🙏`;
+      $("#g-hint").hidden=false;showForm()};
+    if(d.gift_reported){$("#g-open").hidden=true;$("#g-thanks").hidden=false;$("#g-thanks").textContent="קיבלנו את העדכון שלכם. תודה רבה! 🤍"}
+  }
   async function load(){
     const {data,error}=await sb.rpc("rsvp_get",{k});
     if(error||!data){show("bad");return}
@@ -110,6 +156,7 @@ select{font:inherit;padding:12px;border-radius:12px;border:1.5px solid var(--lin
     
     setN(d.coming||Number(d.invited)||1);$("#meal").value=d.meal||"רגיל";
     show("app");
+    if(giftMode){showGift();return}
     if(d.answered&&d.status!=="pending")showDone();
   }
   document.querySelectorAll("[data-st]").forEach(b=>b.onclick=()=>pick(b.dataset.st));
@@ -121,6 +168,17 @@ select{font:inherit;padding:12px;border-radius:12px;border:1.5px solid var(--lin
     b.textContent="שליחת תשובה";b.disabled=false;
     if(error||!data){$("#err").textContent="השליחה לא הצליחה. בדקו שיש אינטרנט ונסו שוב.";$("#err").hidden=false;return}
     d.status=st;d.coming=st==="yes"?n:st==="no"?0:null;if(st==="yes")d.meal=$("#meal").value;showDone();
+  };
+  function showForm(){if(!$("#g-thanks").hidden&&!$("#g-open").hidden)return;$("#g-form").hidden=false;$("#g-open").hidden=true;$("#g-thanks").hidden=true}
+  $("#g-open").onclick=()=>{showForm();$("#g-amt").focus()};
+  $("#g-send").onclick=async()=>{
+    const amt=Number($("#g-amt").value);$("#g-err").hidden=true;
+    if(!(amt>0)){$("#g-err").textContent="מה הסכום שהעברתם?";$("#g-err").hidden=false;return}
+    const b=$("#g-send");b.disabled=true;b.textContent="שולח…";
+    const {data,error}=await sb.rpc("gift_report",{k,amt,method:$("#g-method").value,note:$("#g-note").value,p_to:$("#g-to").value});
+    b.disabled=false;b.textContent="עדכון הזוג";
+    if(error||!data){$("#g-err").textContent="העדכון לא נשלח. בדקו שיש אינטרנט ונסו שוב.";$("#g-err").hidden=false;return}
+    $("#g-form").hidden=true;$("#g-thanks").hidden=false;
   };
   load().catch(()=>show("bad"));
 })();

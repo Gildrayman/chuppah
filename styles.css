@@ -258,3 +258,30 @@ html,body{overflow-x:hidden;max-width:100%}
 @media (max-width:380px){table.pt input.inl,table.bt input.inl{width:3.8em}}
 @media (max-width:380px){table.pt th:nth-child(5),table.pt td:nth-child(5){display:none}}
 input.cell.warn{color:var(--bad);font-weight:700;background:var(--bad-soft)}
+/* הודעות למוזמנים */
+.msgcard{display:flex;flex-direction:column;gap:10px}
+.micon{font-size:26px;line-height:1}
+.gp-row{display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:6px}
+.gp-row input,.gp-row select{min-width:0;width:100%}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer;font:inherit}
+/* מתנות בטלפון: שם, סכום, אופן, תודה */
+@media (max-width:640px){
+  table.gf2{table-layout:fixed;width:100%}
+  table.gf2 th:nth-child(5),table.gf2 td:nth-child(5),table.gf2 th:nth-child(6),table.gf2 td:nth-child(6){display:none}
+  table.gf2 th:nth-child(1),table.gf2 th:nth-child(2){width:25%}
+  table.gf2 th:nth-child(3){width:18%}
+  table.gf2 th:nth-child(4){width:22%}
+  table.gf2 th:nth-child(7){width:10%}
+  table.gf2 input.cell,table.gf2 select.cell{width:100%!important;max-width:100%}
+  table.gf2 td{overflow:hidden;text-overflow:ellipsis}
+  table.gf2 .pill{display:none}
+}
+/* הדפסה / PDF של טבלת המתנות */
+#print-root{display:none}
+@media print{
+  body.printing>*:not(#print-root){display:none!important}
+  body.printing #print-root{display:block;direction:rtl;font-family:Assistant,Arial,sans-serif;color:#000}
+  #print-root table{width:100%;border-collapse:collapse;font-size:11pt}
+  #print-root th,#print-root td{border:1px solid #bbb;padding:4px 6px;text-align:right}
+  #print-root h1{font-size:18pt;margin:0 0 4px}
+}
